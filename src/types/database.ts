@@ -43,6 +43,13 @@ export type AuditEventType =
   | "sessao_treino_removida";
 export type TrainingSessionStatus = "agendado" | "concluido" | "cancelado";
 
+export interface Admin {
+  id: string;
+  user_id: string;
+  managed_trainer_id: string;
+  created_at: string;
+}
+
 export interface TrainerProfile {
   id: string;
   nome_profissional: string;

@@ -1,4 +1,6 @@
 import type { Metadata, Viewport } from "next";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ToastProvider } from "@/components/ui/Toast";
 import "./globals.css";
 
@@ -20,6 +22,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="pt-BR">
       <body className="font-sans antialiased bg-slate-50 text-slate-900">
         <ToastProvider>{children}</ToastProvider>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
