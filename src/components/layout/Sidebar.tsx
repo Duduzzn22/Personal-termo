@@ -21,7 +21,7 @@ const NAV_ITEMS = [
   { href: "/pacotes", label: "Pacotes", icon: Package },
   { href: "/termos", label: "Termos", icon: FileText },
   { href: "/aceites", label: "Aceites", icon: CheckSquare },
-  { href: "/agenda", label: "Agenda", icon: Calendar, comingSoon: true },
+  { href: "/agenda", label: "Agenda", icon: Calendar },
   { href: "/configuracoes", label: "Configurações", icon: Settings },
 ];
 
@@ -60,16 +60,6 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                 <item.icon className="h-4.5 w-4.5" />
                 {item.label}
               </span>
-              {item.comingSoon && (
-                <span
-                  className={cn(
-                    "rounded-full px-2 py-0.5 text-[10px] font-semibold",
-                    active ? "bg-white/20 text-white" : "bg-slate-200 text-slate-500"
-                  )}
-                >
-                  Em breve
-                </span>
-              )}
             </Link>
           );
         })}

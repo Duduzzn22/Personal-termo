@@ -11,9 +11,28 @@ export class TermsRepository {
       .from("term_templates")
       .select("*")
       .eq("trainer_id", trainerId)
+      .eq("ativo", true)
       .order("created_at", { ascending: false });
     if (error) throw error;
     return data as TermTemplate[];
+  }
+
+  /**
+   * "Exclusão" de um termo: o registro nunca é apagado de fato (versões já
+   * publicadas podem ter convites/aceites vinculados, protegidos por FK). Em
+   * vez disso, marcamos ativo=false e o termo some da listagem — mantendo
+   * intacto o histórico de qualquer aluno que já tenha aceitado uma versão dele.
+   */
+  async deactivateTemplate(trainerId: string, id: string) {
+    const { data, error } = await this.db
+      .from("term_templates")
+      .update({ ativo: false })
+      .eq("trainer_id", trainerId)
+      .eq("id", id)
+      .select("*")
+      .single();
+    if (error) throw error;
+    return data as TermTemplate;
   }
 
   async getTemplate(trainerId: string, id: string) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Eye, UploadCloud, Pencil } from "lucide-react";
+import { Plus, Eye, UploadCloud, Pencil, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
@@ -11,6 +11,7 @@ import { TermTemplateForm } from "./TermTemplateForm";
 import { PublishVersionModal } from "./PublishVersionModal";
 import { PreviewAsStudentModal } from "./PreviewAsStudentModal";
 import { VersionHistory } from "./VersionHistory";
+import { SendTermModal } from "@/components/invitations/SendTermModal";
 import type { TermTemplate, TermClause, TermVersion, TermVersionClause } from "@/types/database";
 
 function nextVersionSuggestion(versions: TermVersion[]): string {
@@ -37,6 +38,12 @@ export function TermEditorClient({
   const [editTemplateOpen, setEditTemplateOpen] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [sendOpen, setSendOpen] = useState(false);
+
+  // Versão publicada mais recente deste termo — usada para pré-selecionar o
+  // convite quando o personal clica em "Enviar por WhatsApp" logo após
+  // terminar de editar/publicar (ele só escolhe aluno e pacote).
+  const publishedVersion = versions.find((v) => v.status === "publicado");
 
   return (
     <div className="space-y-6">
@@ -55,6 +62,11 @@ export function TermEditorClient({
           <Button size="sm" onClick={() => setPublishOpen(true)}>
             <UploadCloud className="h-4 w-4" /> Publicar nova versão
           </Button>
+          {publishedVersion && (
+            <Button size="sm" onClick={() => setSendOpen(true)}>
+              <MessageCircle className="h-4 w-4" /> Enviar por WhatsApp
+            </Button>
+          )}
         </div>
       </div>
 
@@ -94,6 +106,14 @@ export function TermEditorClient({
         templateTitle={template.titulo}
         clauses={clauses}
       />
+
+      {publishedVersion && (
+        <SendTermModal
+          open={sendOpen}
+          onClose={() => setSendOpen(false)}
+          preselectedTermVersionId={publishedVersion.id}
+        />
+      )}
     </div>
   );
 }

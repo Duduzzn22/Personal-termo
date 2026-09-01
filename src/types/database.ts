@@ -34,7 +34,14 @@ export type AuditEventType =
   | "aluno_atualizado"
   | "aluno_arquivado"
   | "pacote_criado"
-  | "pacote_atualizado";
+  | "pacote_atualizado"
+  | "termo_excluido"
+  | "horario_treino_criado"
+  | "horario_treino_atualizado"
+  | "horario_treino_removido"
+  | "sessao_treino_registrada"
+  | "sessao_treino_removida";
+export type TrainingSessionStatus = "agendado" | "concluido" | "cancelado";
 
 export interface TrainerProfile {
   id: string;
@@ -224,6 +231,33 @@ export interface AuditLog {
   description: string;
   metadata: Record<string, unknown>;
   created_at: string;
+}
+
+/** Padrão semanal fixo de treino de um aluno (ex.: "toda segunda às 19h"). */
+export interface TrainingSchedule {
+  id: string;
+  trainer_id: string;
+  student_id: string;
+  dia_semana: number; // 0=domingo ... 6=sábado
+  horario: string; // "HH:mm:ss"
+  ativo: boolean;
+  observacoes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Sessão avulsa (schedule_id nulo) ou exceção de uma ocorrência recorrente numa data específica. */
+export interface TrainingSession {
+  id: string;
+  trainer_id: string;
+  student_id: string;
+  schedule_id: string | null;
+  data: string; // "YYYY-MM-DD"
+  horario: string; // "HH:mm:ss"
+  status: TrainingSessionStatus;
+  observacoes: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface NotificationRow {

@@ -8,10 +8,11 @@ import { Modal } from "@/components/ui/Modal";
 import { StatusBadge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StudentForm } from "./StudentForm";
+import { StudentScheduleCard } from "./StudentScheduleCard";
 import { SendTermModal } from "@/components/invitations/SendTermModal";
 import { archiveStudentAction } from "@/lib/actions/students.actions";
 import { formatCPF, formatDateBR, formatPhone, initials } from "@/lib/utils/format";
-import type { Student } from "@/types/database";
+import type { Student, TrainingSchedule } from "@/types/database";
 
 interface InvitationRow {
   id: string;
@@ -24,9 +25,11 @@ interface InvitationRow {
 export function StudentDetailClient({
   student,
   invitations,
+  schedules,
 }: {
   student: Student;
   invitations: InvitationRow[];
+  schedules: TrainingSchedule[];
 }) {
   const [editOpen, setEditOpen] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
@@ -91,6 +94,8 @@ export function StudentDetailClient({
           )}
         </CardContent>
       </Card>
+
+      <StudentScheduleCard studentId={student.id} schedules={schedules} />
 
       <Card>
         <CardHeader>

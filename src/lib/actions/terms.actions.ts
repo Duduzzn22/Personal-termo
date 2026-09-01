@@ -118,6 +118,29 @@ export async function updateTemplateAction(
   return { success: true };
 }
 
+/**
+ * "Exclui" um termo (modelo) da listagem em /termos. Não é uma remoção
+ * definitiva do banco: apenas marca ativo=false (ver TermsRepository.deactivateTemplate),
+ * preservando o histórico de qualquer aluno que já tenha aceitado uma versão dele.
+ */
+export async function deleteTemplateAction(templateId: string) {
+  const { userId } = await requireTrainer();
+  const db = await createClient();
+  const terms = new TermsRepository(db);
+  const audit = new AuditRepository(db);
+
+  const template = await terms.deactivateTemplate(userId, templateId);
+  await audit.log({
+    trainer_id: userId,
+    entity_type: "term_template",
+    entity_id: template.id,
+    event_type: "termo_excluido",
+    description: `Termo "${template.titulo}" excluído.`,
+  });
+
+  revalidatePath("/termos");
+}
+
 // ---- Clauses (rascunho mutável) ----
 
 export async function createClauseAction(

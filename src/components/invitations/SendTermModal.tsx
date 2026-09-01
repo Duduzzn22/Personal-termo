@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { Copy, CheckCircle2 } from "lucide-react";
+import { Copy, CheckCircle2, MessageCircle } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Select, Input, Textarea } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -25,23 +25,33 @@ export function SendTermModal({
   open,
   onClose,
   preselectedStudentId,
+  preselectedTermVersionId,
 }: {
   open: boolean;
   onClose: () => void;
   preselectedStudentId?: string;
+  preselectedTermVersionId?: string;
 }) {
   // Só monta o conteúdo quando o modal está aberto: isso garante que cada
   // abertura comece com estado limpo (sem precisar "resetar" via effect).
   if (!open) return null;
-  return <SendTermModalContent onClose={onClose} preselectedStudentId={preselectedStudentId} />;
+  return (
+    <SendTermModalContent
+      onClose={onClose}
+      preselectedStudentId={preselectedStudentId}
+      preselectedTermVersionId={preselectedTermVersionId}
+    />
+  );
 }
 
 function SendTermModalContent({
   onClose,
   preselectedStudentId,
+  preselectedTermVersionId,
 }: {
   onClose: () => void;
   preselectedStudentId?: string;
+  preselectedTermVersionId?: string;
 }) {
   const open = true;
   const [options, setOptions] = useState<Options | null>(null);
@@ -71,6 +81,14 @@ function SendTermModalContent({
     }
   }
 
+  function sendViaWhatsApp() {
+    if (!state.link) return;
+    const mensagem = `Olá! Segue o link para você revisar e confirmar o termo de ciência e aceite:\n${state.link}`;
+    // Sem número fixo: o WhatsApp abre e o próprio usuário escolhe o contato/conversa
+    // para onde enviar, com a mensagem já pré-preenchida.
+    window.open(`https://wa.me/?text=${encodeURIComponent(mensagem)}`, "_blank", "noopener,noreferrer");
+  }
+
   if (state.success && state.link) {
     return (
       <Modal open={open} onClose={onClose} title="Convite gerado com sucesso">
@@ -89,6 +107,16 @@ function SendTermModalContent({
               {copied ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
             </button>
           </div>
+          <Button
+            variant="outline"
+            fullWidth
+            onClick={async () => {
+              sendViaWhatsApp();
+              if (state.invitationId) await markInvitationSentAction(state.invitationId);
+            }}
+          >
+            <MessageCircle className="h-4 w-4" /> Enviar por WhatsApp
+          </Button>
           <div className="flex justify-end">
             <Button
               onClick={async () => {
@@ -134,7 +162,12 @@ function SendTermModalContent({
               </option>
             ))}
           </Select>
-          <Select label="Modelo do termo / versão" name="term_version_id" required defaultValue="">
+          <Select
+            label="Modelo do termo / versão"
+            name="term_version_id"
+            required
+            defaultValue={preselectedTermVersionId ?? ""}
+          >
             <option value="" disabled>
               Selecione um termo publicado
             </option>
