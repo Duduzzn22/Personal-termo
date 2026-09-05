@@ -57,22 +57,29 @@ begin
 end;
 $$ language plpgsql;
 
+revoke all on function validate_payment_ownership() from public, anon, authenticated;
+
 create trigger trg_validate_payment_ownership
   before insert or update of trainer_id, student_id, student_package_id
   on payments
   for each row execute function validate_payment_ownership();
 
 -- -----------------------------------------------------------------------------
--- RLS: mesmo isolamento multi-tenant do restante do SaaS e compatível com o
--- perfil administrativo criado em 0005_admin_access.sql.
+-- DATA API + RLS
+-- Grants explícitos porque o Supabase está migrando para novas tabelas não
+-- serem expostas automaticamente à Data API. `anon` não acessa o financeiro.
 -- -----------------------------------------------------------------------------
+
+grant select, insert, update, delete on table payments to authenticated, service_role;
+revoke all on table payments from anon;
 
 alter table payments enable row level security;
 
 create policy payments_all_own on payments
   for all
-  using (trainer_id = auth.uid() or is_managing_trainer(trainer_id))
-  with check (trainer_id = auth.uid() or is_managing_trainer(trainer_id));
+  to authenticated
+  using ((select auth.uid()) = trainer_id or is_managing_trainer(trainer_id))
+  with check ((select auth.uid()) = trainer_id or is_managing_trainer(trainer_id));
 
 -- -----------------------------------------------------------------------------
 -- PACOTE CONTRATADO -> COBRANÇA
@@ -118,6 +125,9 @@ begin
   return new;
 end;
 $$ language plpgsql security definer set search_path = public;
+
+-- SECURITY DEFINER usado apenas pelo trigger; não expor como RPC.
+revoke all on function create_payment_after_student_package() from public, anon, authenticated;
 
 drop trigger if exists trg_create_payment_after_student_package on student_packages;
 create trigger trg_create_payment_after_student_package
