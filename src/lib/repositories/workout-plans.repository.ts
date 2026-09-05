@@ -7,6 +7,16 @@ import type {
   WorkoutPlanWithStudent,
 } from "@/types/workout";
 
+interface WorkoutItemInput {
+  exercise_id: string;
+  bloco?: string | null;
+  series?: number | null;
+  repeticoes?: string | null;
+  carga?: string | null;
+  descanso_segundos?: number | null;
+  observacoes?: string | null;
+}
+
 export class WorkoutPlansRepository {
   constructor(private db: SupabaseClient) {}
 
@@ -119,19 +129,7 @@ export class WorkoutPlansRepository {
     return data as WorkoutPlan;
   }
 
-  async addItem(
-    trainerId: string,
-    planId: string,
-    input: {
-      exercise_id: string;
-      bloco?: string | null;
-      series?: number | null;
-      repeticoes?: string | null;
-      carga?: string | null;
-      descanso_segundos?: number | null;
-      observacoes?: string | null;
-    }
-  ) {
+  async addItem(trainerId: string, planId: string, input: WorkoutItemInput) {
     const { count, error: countError } = await this.db
       .from("workout_plan_items")
       .select("id", { count: "exact", head: true })
@@ -151,6 +149,19 @@ export class WorkoutPlansRepository {
       .select("*")
       .single();
 
+    if (error) throw error;
+    return data;
+  }
+
+  async updateItem(trainerId: string, planId: string, itemId: string, input: WorkoutItemInput) {
+    const { data, error } = await this.db
+      .from("workout_plan_items")
+      .update(input)
+      .eq("trainer_id", trainerId)
+      .eq("workout_plan_id", planId)
+      .eq("id", itemId)
+      .select("*")
+      .single();
     if (error) throw error;
     return data;
   }
