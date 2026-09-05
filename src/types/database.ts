@@ -259,6 +259,7 @@ export interface TrainingSession {
   trainer_id: string;
   student_id: string;
   schedule_id: string | null;
+  student_package_id: string | null;
   data: string; // "YYYY-MM-DD"
   horario: string; // "HH:mm:ss"
   status: TrainingSessionStatus;
