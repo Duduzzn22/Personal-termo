@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Package, FileText, CheckSquare, Calendar, CalendarClock, AlertTriangle, Settings, Dumbbell, WalletCards, X } from "lucide-react";
+import { LayoutDashboard, Users, Package, FileText, CheckSquare, Calendar, CalendarClock, AlertTriangle, MessageCircle, Settings, Dumbbell, WalletCards, X } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
 const NAV_ITEMS = [
@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { href: "/solicitacoes", label: "Solicitações", icon: CalendarClock },
   { href: "/treinos", label: "Treinos", icon: Dumbbell },
   { href: "/financeiro", label: "Financeiro", icon: WalletCards },
+  { href: "/whatsapp", label: "WhatsApp", icon: MessageCircle },
   { href: "/termos", label: "Termos", icon: FileText },
   { href: "/aceites", label: "Aceites", icon: CheckSquare },
   { href: "/configuracoes", label: "Configurações", icon: Settings },
