@@ -21,6 +21,7 @@ const NAV_ITEMS = [
   { href: "/alunos", label: "Alunos", icon: Users },
   { href: "/pacotes", label: "Pacotes", icon: Package },
   { href: "/agenda", label: "Agenda", icon: Calendar },
+  { href: "/treinos", label: "Treinos", icon: Dumbbell },
   { href: "/financeiro", label: "Financeiro", icon: WalletCards },
   { href: "/termos", label: "Termos", icon: FileText },
   { href: "/aceites", label: "Aceites", icon: CheckSquare },
