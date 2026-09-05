@@ -9,9 +9,11 @@ import { StatusBadge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StudentForm } from "./StudentForm";
 import { StudentScheduleCard } from "./StudentScheduleCard";
+import { StudentPackagesCard } from "./StudentPackagesCard";
 import { SendTermModal } from "@/components/invitations/SendTermModal";
 import { archiveStudentAction } from "@/lib/actions/students.actions";
 import { formatCPF, formatDateBR, formatPhone, initials } from "@/lib/utils/format";
+import type { StudentPackageWithPackage } from "@/lib/repositories/student-packages.repository";
 import type { Student, TrainingSchedule } from "@/types/database";
 
 interface InvitationRow {
@@ -26,10 +28,12 @@ export function StudentDetailClient({
   student,
   invitations,
   schedules,
+  studentPackages,
 }: {
   student: Student;
   invitations: InvitationRow[];
   schedules: TrainingSchedule[];
+  studentPackages: StudentPackageWithPackage[];
 }) {
   const [editOpen, setEditOpen] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
@@ -94,6 +98,8 @@ export function StudentDetailClient({
           )}
         </CardContent>
       </Card>
+
+      <StudentPackagesCard packages={studentPackages} />
 
       <StudentScheduleCard studentId={student.id} schedules={schedules} />
 
