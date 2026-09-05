@@ -82,6 +82,9 @@ begin
 end;
 $$ language plpgsql security definer set search_path = public;
 
+-- Função interna de trigger: nunca deve ser chamada diretamente via Data API/RPC.
+revoke all on function create_student_package_after_acceptance() from public, anon, authenticated;
+
 drop trigger if exists trg_create_student_package_after_acceptance on acceptances;
 create trigger trg_create_student_package_after_acceptance
   after insert on acceptances
@@ -238,6 +241,8 @@ begin
 end;
 $$ language plpgsql;
 
+revoke all on function assign_student_package_to_completed_session() from public, anon, authenticated;
+
 drop trigger if exists trg_assign_package_before_session_write on training_sessions;
 drop trigger if exists trg_assign_package_before_session_insert on training_sessions;
 drop trigger if exists trg_assign_package_before_session_update on training_sessions;
@@ -295,6 +300,8 @@ begin
 end;
 $$ language plpgsql security definer set search_path = public;
 
+revoke all on function sync_student_package_usage(uuid) from public, anon, authenticated;
+
 create or replace function sync_student_package_usage_from_session()
 returns trigger as $$
 begin
@@ -311,6 +318,8 @@ begin
   return new;
 end;
 $$ language plpgsql security definer set search_path = public;
+
+revoke all on function sync_student_package_usage_from_session() from public, anon, authenticated;
 
 drop trigger if exists trg_sync_package_after_session_write on training_sessions;
 drop trigger if exists trg_sync_package_after_session_insert_delete on training_sessions;
