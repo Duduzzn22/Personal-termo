@@ -1,6 +1,7 @@
 import { CalendarDays, CreditCard, Dumbbell, LogOut, Ruler, WalletCards } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { PortalAgendaLink } from "@/components/portal/PortalAgendaLink";
 import { studentPortalSignOutAction } from "@/lib/actions/student-portal.actions";
 import { requireStudentPortal } from "@/lib/auth/current-student";
 import { DIAS_SEMANA } from "@/lib/utils/agenda";
@@ -70,11 +71,14 @@ export default async function StudentPortalPage() {
             <h1 className="mt-1 text-2xl font-semibold tracking-tight">Olá, {firstName}</h1>
             <p className="mt-1 text-sm text-slate-300">Aqui está um resumo atualizado do seu acompanhamento.</p>
           </div>
-          <form action={studentPortalSignOutAction}>
-            <Button type="submit" variant="outline" size="sm" className="border-slate-600 bg-transparent text-white hover:bg-slate-800 hover:text-white">
-              <LogOut className="h-4 w-4" /> Sair
-            </Button>
-          </form>
+          <div className="flex flex-wrap items-center gap-2">
+            <PortalAgendaLink />
+            <form action={studentPortalSignOutAction}>
+              <Button type="submit" variant="outline" size="sm" className="border-slate-600 bg-transparent text-white hover:bg-slate-800 hover:text-white">
+                <LogOut className="h-4 w-4" /> Sair
+              </Button>
+            </form>
+          </div>
         </header>
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
