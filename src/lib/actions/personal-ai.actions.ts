@@ -33,15 +33,24 @@ export async function askPersonalAiAction(_prev: PersonalAiState, formData: Form
     return { answer: result.answer, question };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Falha ao consultar a IA.";
-    await db.from("ai_personal_logs").insert({
-      trainer_id: userId,
-      model,
-      request_type: "consulta",
-      input_chars: question.length,
-      output_chars: 0,
-      status: "erro",
-      error_message: message.slice(0, 500),
-    }).catch(() => undefined);
-    return { error: message.includes("AI_GATEWAY_API_KEY") ? "A IA ainda não foi configurada no ambiente da Vercel." : "Não foi possível gerar a análise agora.", question };
+    try {
+      await db.from("ai_personal_logs").insert({
+        trainer_id: userId,
+        model,
+        request_type: "consulta",
+        input_chars: question.length,
+        output_chars: 0,
+        status: "erro",
+        error_message: message.slice(0, 500),
+      });
+    } catch {
+      // O log nunca deve impedir a resposta amigável da interface.
+    }
+    return {
+      error: message.includes("AI_GATEWAY_API_KEY")
+        ? "A IA ainda não foi configurada no ambiente da Vercel."
+        : "Não foi possível gerar a análise agora.",
+      question,
+    };
   }
 }
