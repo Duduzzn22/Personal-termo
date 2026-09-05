@@ -3,9 +3,6 @@
 -- Histórico de avaliações físicas e evolução corporal por aluno.
 -- =============================================================================
 
-alter type audit_event_type add value if not exists 'avaliacao_fisica_criada';
-alter type audit_event_type add value if not exists 'avaliacao_fisica_atualizada';
-
 create table physical_assessments (
   id uuid primary key default gen_random_uuid(),
   trainer_id uuid not null references trainer_profiles(id) on delete cascade,
