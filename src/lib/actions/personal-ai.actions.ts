@@ -15,13 +15,13 @@ export async function askPersonalAiAction(_prev: PersonalAiState, formData: Form
   if (!question) return { error: "Escreva o que você quer analisar." };
   if (question.length > 2500) return { error: "A pergunta está muito longa. Limite: 2500 caracteres." };
 
-  const { userId, profile } = await requireTrainer();
+  const { userId } = await requireTrainer();
   const db = await createClient();
-  const model = process.env.AI_GATEWAY_MODEL || "openai/gpt-5.4";
+  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
   try {
-    const context = await buildPersonalAiContext(db, userId, profile.nome_profissional);
-    const result = await askPersonalAi({ question, context, trainerId: userId });
+    const { context, aliases } = await buildPersonalAiContext(db, userId);
+    const result = await askPersonalAi({ question, context, aliases });
     await db.from("ai_personal_logs").insert({
       trainer_id: userId,
       model: result.model,
@@ -47,7 +47,7 @@ export async function askPersonalAiAction(_prev: PersonalAiState, formData: Form
       // O log nunca deve impedir a resposta amigável da interface.
     }
     return {
-      error: message.includes("AI_GATEWAY_API_KEY")
+      error: message.includes("GEMINI_API_KEY")
         ? "A IA ainda não foi configurada no ambiente da Vercel."
         : "Não foi possível gerar a análise agora.",
       question,
