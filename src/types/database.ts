@@ -62,6 +62,7 @@ export interface TrainerProfile {
   foto_url: string | null;
   cor_principal: string;
   timezone: string;
+  cancelamento_antecedencia_horas: number;
   created_at: string;
   updated_at: string;
 }
