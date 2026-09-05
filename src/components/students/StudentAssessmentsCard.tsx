@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Modal } from "@/components/ui/Modal";
 import { AssessmentForm } from "./AssessmentForm";
+import { AssessmentTrendChart } from "./AssessmentTrendChart";
 import { calculateAssessmentBMI, type PhysicalAssessment } from "@/types/assessment";
 
 function formatWallDate(value: string) {
@@ -133,6 +134,17 @@ export function StudentAssessmentsCard({
                 />
                 <MetricCard label="IMC" value={formatBMI(latest)} />
               </div>
+
+              {assessments.length >= 2 && (
+                <div>
+                  <p className="mb-3 text-sm font-semibold text-slate-900">Tendência</p>
+                  <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+                    <AssessmentTrendChart assessments={assessments} metric="peso_kg" label="Peso" unit=" kg" />
+                    <AssessmentTrendChart assessments={assessments} metric="percentual_gordura" label="Gordura corporal" unit="%" />
+                    <AssessmentTrendChart assessments={assessments} metric="cintura_cm" label="Cintura" unit=" cm" />
+                  </div>
+                </div>
+              )}
 
               <div className="overflow-x-auto rounded-xl border border-slate-200">
                 <table className="w-full text-left text-sm">
