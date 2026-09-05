@@ -24,7 +24,17 @@ export function parseCurrencyToCents(value: string): number {
 
 export function formatDateBR(value: string | Date | null | undefined): string {
   if (!value) return "—";
-  const date = typeof value === "string" ? new Date(value) : value;
+
+  // Datas SQL do tipo DATE chegam como YYYY-MM-DD. O construtor Date interpreta
+  // esse formato como UTC e poderia exibir o dia anterior em America/Sao_Paulo.
+  // Usar meio-dia local preserva a data civil original.
+  const date =
+    typeof value === "string"
+      ? /^\d{4}-\d{2}-\d{2}$/.test(value)
+        ? new Date(`${value}T12:00:00`)
+        : new Date(value)
+      : value;
+
   if (Number.isNaN(date.getTime())) return "—";
   return new Intl.DateTimeFormat("pt-BR", {
     timeZone: DEFAULT_TIMEZONE,
