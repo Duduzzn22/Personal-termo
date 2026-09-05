@@ -158,10 +158,13 @@ begin
     return new;
   end if;
 
-  v_is_new_consumption :=
-    tg_op = 'INSERT'
-    or old.status is distinct from 'concluido'
-    or old.student_package_id is distinct from new.student_package_id;
+  if tg_op = 'INSERT' then
+    v_is_new_consumption := true;
+  else
+    v_is_new_consumption :=
+      old.status is distinct from 'concluido'
+      or old.student_package_id is distinct from new.student_package_id;
+  end if;
 
   -- Sessão já vinculada a um pacote: valida propriedade e, quando estiver
   -- consumindo a aula novamente, revalida status, validade e saldo disponível.
@@ -236,9 +239,15 @@ end;
 $$ language plpgsql;
 
 drop trigger if exists trg_assign_package_before_session_write on training_sessions;
-create trigger trg_assign_package_before_session_write
-  before insert or update of status, student_package_id, student_id, data
-  on training_sessions
+drop trigger if exists trg_assign_package_before_session_insert on training_sessions;
+drop trigger if exists trg_assign_package_before_session_update on training_sessions;
+
+create trigger trg_assign_package_before_session_insert
+  before insert on training_sessions
+  for each row execute function assign_student_package_to_completed_session();
+
+create trigger trg_assign_package_before_session_update
+  before update of status, student_package_id, student_id, data on training_sessions
   for each row execute function assign_student_package_to_completed_session();
 
 -- -----------------------------------------------------------------------------
@@ -304,7 +313,13 @@ end;
 $$ language plpgsql security definer set search_path = public;
 
 drop trigger if exists trg_sync_package_after_session_write on training_sessions;
-create trigger trg_sync_package_after_session_write
-  after insert or update of status, student_package_id or delete
-  on training_sessions
+drop trigger if exists trg_sync_package_after_session_insert_delete on training_sessions;
+drop trigger if exists trg_sync_package_after_session_update on training_sessions;
+
+create trigger trg_sync_package_after_session_insert_delete
+  after insert or delete on training_sessions
+  for each row execute function sync_student_package_usage_from_session();
+
+create trigger trg_sync_package_after_session_update
+  after update of status, student_package_id on training_sessions
   for each row execute function sync_student_package_usage_from_session();
