@@ -15,6 +15,35 @@ export interface AgendaActionState {
   success?: boolean;
 }
 
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "message" in error &&
+    typeof (error as { message?: unknown }).message === "string"
+  ) {
+    return (error as { message: string }).message;
+  }
+  return "";
+}
+
+function sessionMutationError(error: unknown): AgendaActionState {
+  const message = errorMessage(error);
+
+  if (message.includes("Aluno não possui pacote ativo com aulas disponíveis")) {
+    return {
+      error: "Este aluno não possui um pacote ativo com aulas disponíveis para esta data.",
+    };
+  }
+
+  if (message.includes("pacote selecionado não pertence a este aluno")) {
+    return { error: "O pacote vinculado a esta aula não pertence ao aluno." };
+  }
+
+  return { error: "Não foi possível atualizar esta sessão. Tente novamente." };
+}
+
 // ---- Horário fixo semanal (editável na aba do aluno) ----
 
 export async function createScheduleAction(
@@ -165,6 +194,10 @@ export async function createAvulsaSessionAction(
  * tanto para concluir/cancelar quanto para mudar o horário só daquele dia.
  * Quando a ocorrência ainda é apenas o padrão semanal "virtual" (nunca teve
  * exceção registrada), materializa a primeira linha em training_sessions.
+ *
+ * Ao concluir, o banco vincula automaticamente a sessão ao pacote ativo do
+ * aluno. Se não houver crédito disponível, a mutation falha e devolvemos uma
+ * mensagem amigável para a interface.
  */
 export async function upsertOccurrenceAction(input: {
   sessionId: string | null;
@@ -173,42 +206,51 @@ export async function upsertOccurrenceAction(input: {
   data: string;
   horario: string;
   status: TrainingSessionStatus;
-}) {
+}): Promise<AgendaActionState> {
   const { userId } = await requireTrainer();
   const db = await createClient();
   const agenda = new AgendaRepository(db);
   const audit = new AuditRepository(db);
 
-  const session = input.sessionId
-    ? await agenda.updateSession(userId, input.sessionId, {
-        horario: input.horario,
-        status: input.status,
-      })
-    : input.scheduleId
-      ? await agenda.upsertSessionForSchedule(userId, {
-          schedule_id: input.scheduleId,
-          student_id: input.studentId,
-          data: input.data,
+  try {
+    const session = input.sessionId
+      ? await agenda.updateSession(userId, input.sessionId, {
           horario: input.horario,
           status: input.status,
         })
-      : await agenda.createSession(userId, {
-          student_id: input.studentId,
-          schedule_id: null,
-          data: input.data,
-          horario: input.horario,
-          status: input.status,
-        });
+      : input.scheduleId
+        ? await agenda.upsertSessionForSchedule(userId, {
+            schedule_id: input.scheduleId,
+            student_id: input.studentId,
+            data: input.data,
+            horario: input.horario,
+            status: input.status,
+          })
+        : await agenda.createSession(userId, {
+            student_id: input.studentId,
+            schedule_id: null,
+            data: input.data,
+            horario: input.horario,
+            status: input.status,
+          });
 
-  await audit.log({
-    trainer_id: userId,
-    entity_type: "training_session",
-    entity_id: session.id,
-    event_type: "sessao_treino_registrada",
-    description: `Sessão de ${session.data} às ${formatTimeShort(session.horario)} marcada como "${input.status}".`,
-  });
+    await audit.log({
+      trainer_id: userId,
+      entity_type: "training_session",
+      entity_id: session.id,
+      event_type: "sessao_treino_registrada",
+      description: `Sessão de ${session.data} às ${formatTimeShort(session.horario)} marcada como "${input.status}".`,
+      metadata: {
+        student_package_id: session.student_package_id,
+      },
+    });
 
-  revalidatePath("/agenda");
+    revalidatePath("/agenda");
+    revalidatePath(`/alunos/${input.studentId}`);
+    return { success: true };
+  } catch (error) {
+    return sessionMutationError(error);
+  }
 }
 
 /** Remove uma sessão avulsa, ou reverte uma exceção recorrente para o horário/status padrão do dia. */
