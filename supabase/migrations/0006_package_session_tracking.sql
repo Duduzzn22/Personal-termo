@@ -140,26 +140,68 @@ end $$;
 -- SESSÃO CONCLUÍDA -> ESCOLHA AUTOMÁTICA DO PACOTE
 -- Usa FIFO entre os pacotes ativos e válidos do aluno. O FOR UPDATE evita que
 -- duas conclusões simultâneas consumam a última aula do mesmo pacote.
+-- Também revalida saldo ao concluir novamente uma sessão que havia sido reaberta.
 -- -----------------------------------------------------------------------------
 
 create or replace function assign_student_package_to_completed_session()
 returns trigger as $$
 declare
   v_student_package_id uuid;
+  v_quantidade_aulas integer;
+  v_package_status student_package_status;
+  v_data_inicio date;
+  v_data_validade_final date;
+  v_other_completed integer;
+  v_is_new_consumption boolean;
 begin
   if new.status <> 'concluido' then
     return new;
   end if;
 
+  v_is_new_consumption :=
+    tg_op = 'INSERT'
+    or old.status is distinct from 'concluido'
+    or old.student_package_id is distinct from new.student_package_id;
+
+  -- Sessão já vinculada a um pacote: valida propriedade e, quando estiver
+  -- consumindo a aula novamente, revalida status, validade e saldo disponível.
   if new.student_package_id is not null then
-    perform 1
+    select p.quantidade_aulas, sp.status, sp.data_inicio, sp.data_validade_final
+      into v_quantidade_aulas, v_package_status, v_data_inicio, v_data_validade_final
       from student_packages sp
+      join packages p on p.id = sp.package_id
      where sp.id = new.student_package_id
        and sp.trainer_id = new.trainer_id
-       and sp.student_id = new.student_id;
+       and sp.student_id = new.student_id
+     for update of sp;
 
     if not found then
       raise exception 'O pacote selecionado não pertence a este aluno.';
+    end if;
+
+    if v_is_new_consumption then
+      if v_package_status <> 'ativo' then
+        raise exception 'O pacote desta aula não está ativo para novo consumo.';
+      end if;
+
+      if v_data_inicio is not null and v_data_inicio > new.data then
+        raise exception 'O pacote ainda não estava válido na data desta aula.';
+      end if;
+
+      if v_data_validade_final is not null and v_data_validade_final < new.data then
+        raise exception 'O pacote estava expirado na data desta aula.';
+      end if;
+
+      select count(*)::integer
+        into v_other_completed
+        from training_sessions ts
+       where ts.student_package_id = new.student_package_id
+         and ts.status = 'concluido'
+         and (new.id is null or ts.id <> new.id);
+
+      if v_other_completed >= v_quantidade_aulas then
+        raise exception 'Este pacote não possui mais aulas disponíveis.';
+      end if;
     end if;
 
     return new;
@@ -174,7 +216,12 @@ begin
      and sp.status = 'ativo'
      and (sp.data_inicio is null or sp.data_inicio <= new.data)
      and (sp.data_validade_final is null or sp.data_validade_final >= new.data)
-     and sp.aulas_realizadas < p.quantidade_aulas
+     and (
+       select count(*)
+         from training_sessions ts
+        where ts.student_package_id = sp.id
+          and ts.status = 'concluido'
+     ) < p.quantidade_aulas
    order by coalesce(sp.data_inicio, sp.created_at::date), sp.created_at
    for update of sp
    limit 1;
