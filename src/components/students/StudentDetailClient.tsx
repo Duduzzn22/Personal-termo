@@ -9,9 +9,17 @@ import { StatusBadge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StudentForm } from "./StudentForm";
 import { StudentScheduleCard } from "./StudentScheduleCard";
+import { StudentPackagesCard } from "./StudentPackagesCard";
+import { StudentSessionHistoryCard } from "./StudentSessionHistoryCard";
+import { StudentAssessmentsCard } from "./StudentAssessmentsCard";
+import { StudentWorkoutsCard } from "./StudentWorkoutsCard";
 import { SendTermModal } from "@/components/invitations/SendTermModal";
 import { archiveStudentAction } from "@/lib/actions/students.actions";
 import { formatCPF, formatDateBR, formatPhone, initials } from "@/lib/utils/format";
+import type { StudentPackageWithPackage } from "@/lib/repositories/student-packages.repository";
+import type { TrainingSessionWithPackage } from "@/lib/repositories/agenda.repository";
+import type { PhysicalAssessment } from "@/types/assessment";
+import type { WorkoutPlanWithStudent } from "@/types/workout";
 import type { Student, TrainingSchedule } from "@/types/database";
 
 interface InvitationRow {
@@ -26,13 +34,37 @@ export function StudentDetailClient({
   student,
   invitations,
   schedules,
+  studentPackages,
+  sessions,
+  assessments,
+  workouts,
 }: {
   student: Student;
   invitations: InvitationRow[];
   schedules: TrainingSchedule[];
+  studentPackages: StudentPackageWithPackage[];
+  sessions: TrainingSessionWithPackage[];
+  assessments: PhysicalAssessment[];
+  workouts: WorkoutPlanWithStudent[];
 }) {
   const [editOpen, setEditOpen] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
+  const [renewalPackageId, setRenewalPackageId] = useState<string | undefined>();
+
+  function openRegularTerm() {
+    setRenewalPackageId(undefined);
+    setSendOpen(true);
+  }
+
+  function openRenewal(packageId: string) {
+    setRenewalPackageId(packageId);
+    setSendOpen(true);
+  }
+
+  function closeSendModal() {
+    setSendOpen(false);
+    setRenewalPackageId(undefined);
+  }
 
   return (
     <div className="space-y-4">
@@ -58,7 +90,7 @@ export function StudentDetailClient({
                 </Button>
               </form>
             )}
-            <Button size="sm" onClick={() => setSendOpen(true)}>
+            <Button size="sm" onClick={openRegularTerm}>
               <Send className="h-4 w-4" /> Enviar Termo
             </Button>
           </div>
@@ -95,7 +127,15 @@ export function StudentDetailClient({
         </CardContent>
       </Card>
 
+      <StudentPackagesCard packages={studentPackages} onRenew={openRenewal} />
+
       <StudentScheduleCard studentId={student.id} schedules={schedules} />
+
+      <StudentSessionHistoryCard sessions={sessions} />
+
+      <StudentAssessmentsCard studentId={student.id} assessments={assessments} />
+
+      <StudentWorkoutsCard plans={workouts} />
 
       <Card>
         <CardHeader>
@@ -145,7 +185,12 @@ export function StudentDetailClient({
         <StudentForm student={student} onSuccess={() => setEditOpen(false)} />
       </Modal>
 
-      <SendTermModal open={sendOpen} onClose={() => setSendOpen(false)} preselectedStudentId={student.id} />
+      <SendTermModal
+        open={sendOpen}
+        onClose={closeSendModal}
+        preselectedStudentId={student.id}
+        preselectedPackageId={renewalPackageId}
+      />
     </div>
   );
 }

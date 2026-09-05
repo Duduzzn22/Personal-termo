@@ -80,10 +80,12 @@ export function AgendaPageClient({
 
 function OccurrenceRow({ occurrence, onEditTime }: { occurrence: AgendaOccurrence; onEditTime: () => void }) {
   const [isPending, startTransition] = useTransition();
+  const [actionError, setActionError] = useState<string | null>(null);
 
   function setStatus(status: TrainingSessionStatus) {
-    startTransition(() => {
-      upsertOccurrenceAction({
+    startTransition(async () => {
+      setActionError(null);
+      const result = await upsertOccurrenceAction({
         sessionId: occurrence.sessionId,
         scheduleId: occurrence.scheduleId,
         studentId: occurrence.studentId,
@@ -91,14 +93,16 @@ function OccurrenceRow({ occurrence, onEditTime }: { occurrence: AgendaOccurrenc
         horario: occurrence.horario,
         status,
       });
+      if (result.error) setActionError(result.error);
     });
   }
 
   function remove() {
     const sessionId = occurrence.sessionId;
     if (!sessionId) return;
-    startTransition(() => {
-      deleteOccurrenceSessionAction(sessionId);
+    startTransition(async () => {
+      setActionError(null);
+      await deleteOccurrenceSessionAction(sessionId);
     });
   }
 
@@ -117,41 +121,44 @@ function OccurrenceRow({ occurrence, onEditTime }: { occurrence: AgendaOccurrenc
           {occurrence.observacoes && <p className="mt-0.5 text-xs text-slate-400">{occurrence.observacoes}</p>}
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-1.5">
-        <StatusBadge status={occurrence.status} />
-        {occurrence.status !== "concluido" && (
-          <Button size="sm" variant="outline" disabled={isPending} onClick={() => setStatus("concluido")}>
-            <Check className="h-3.5 w-3.5" /> Concluir
-          </Button>
-        )}
-        {occurrence.status !== "cancelado" && (
-          <Button size="sm" variant="outline" disabled={isPending} onClick={() => setStatus("cancelado")}>
-            <X className="h-3.5 w-3.5" /> Cancelar
-          </Button>
-        )}
-        {occurrence.status !== "agendado" && (
-          <Button size="sm" variant="outline" disabled={isPending} onClick={() => setStatus("agendado")}>
-            <RotateCcw className="h-3.5 w-3.5" /> Reabrir
-          </Button>
-        )}
-        <button
-          onClick={onEditTime}
-          disabled={isPending}
-          className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
-          title="Alterar horário deste dia"
-        >
-          <Pencil className="h-4 w-4" />
-        </button>
-        {occurrence.sessionId && (
+      <div className="flex flex-col items-start gap-1.5 sm:items-end">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <StatusBadge status={occurrence.status} />
+          {occurrence.status !== "concluido" && (
+            <Button size="sm" variant="outline" disabled={isPending} onClick={() => setStatus("concluido")}>
+              <Check className="h-3.5 w-3.5" /> Concluir
+            </Button>
+          )}
+          {occurrence.status !== "cancelado" && (
+            <Button size="sm" variant="outline" disabled={isPending} onClick={() => setStatus("cancelado")}>
+              <X className="h-3.5 w-3.5" /> Cancelar
+            </Button>
+          )}
+          {occurrence.status !== "agendado" && (
+            <Button size="sm" variant="outline" disabled={isPending} onClick={() => setStatus("agendado")}>
+              <RotateCcw className="h-3.5 w-3.5" /> Reabrir
+            </Button>
+          )}
           <button
-            onClick={remove}
+            onClick={onEditTime}
             disabled={isPending}
-            className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
-            title={occurrence.origem === "recorrente" ? "Restaurar horário padrão" : "Remover sessão"}
+            className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
+            title="Alterar horário deste dia"
           >
-            <Trash2 className="h-4 w-4" />
+            <Pencil className="h-4 w-4" />
           </button>
-        )}
+          {occurrence.sessionId && (
+            <button
+              onClick={remove}
+              disabled={isPending}
+              className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+              title={occurrence.origem === "recorrente" ? "Restaurar horário padrão" : "Remover sessão"}
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        {actionError && <p className="max-w-md text-xs text-red-600">{actionError}</p>}
       </div>
     </div>
   );
@@ -159,11 +166,13 @@ function OccurrenceRow({ occurrence, onEditTime }: { occurrence: AgendaOccurrenc
 
 function EditTimeModal({ occurrence, onClose }: { occurrence: AgendaOccurrence; onClose: () => void }) {
   const [horario, setHorario] = useState(occurrence.horario.slice(0, 5));
+  const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function save() {
     startTransition(async () => {
-      await upsertOccurrenceAction({
+      setError(null);
+      const result = await upsertOccurrenceAction({
         sessionId: occurrence.sessionId,
         scheduleId: occurrence.scheduleId,
         studentId: occurrence.studentId,
@@ -171,6 +180,10 @@ function EditTimeModal({ occurrence, onClose }: { occurrence: AgendaOccurrence; 
         horario,
         status: occurrence.status,
       });
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
       onClose();
     });
   }
@@ -182,6 +195,7 @@ function EditTimeModal({ occurrence, onClose }: { occurrence: AgendaOccurrence; 
         <p className="text-xs text-slate-500">
           Isso altera o horário só de {occurrence.studentName} neste dia — o padrão semanal continua o mesmo.
         </p>
+        {error && <p className="text-xs text-red-600">{error}</p>}
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={onClose} disabled={isPending}>
             Cancelar

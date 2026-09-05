@@ -1,5 +1,14 @@
 import Link from "next/link";
-import { Users, UserCheck, Clock, CheckCircle2, Package as PackageIcon, Send } from "lucide-react";
+import {
+  Users,
+  UserCheck,
+  Clock,
+  CheckCircle2,
+  Package as PackageIcon,
+  Send,
+  AlertTriangle,
+  RotateCcw,
+} from "lucide-react";
 import { requireTrainer } from "@/lib/auth/current-trainer";
 import { createClient } from "@/lib/supabase/server";
 import { getDashboardStats } from "@/lib/services/dashboard.service";
@@ -22,12 +31,13 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-6">
         <StatCard label="Total de alunos" value={stats.totalAlunos} icon={Users} tone="slate" />
         <StatCard label="Alunos ativos" value={stats.alunosAtivos} icon={UserCheck} tone="blue" />
         <StatCard label="Aguardando aceite" value={stats.termosAguardando} icon={Clock} tone="amber" />
         <StatCard label="Termos aceitos" value={stats.termosAceitos} icon={CheckCircle2} tone="green" />
         <StatCard label="Pacotes ativos" value={stats.pacotesAtivos} icon={PackageIcon} tone="slate" />
+        <StatCard label="Renovações" value={stats.renovacoesPendentes} icon={AlertTriangle} tone="amber" />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -65,6 +75,45 @@ export default async function DashboardPage() {
           </Card>
         </Link>
       </div>
+
+      {stats.renewalCandidates.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div>
+              <CardTitle>Renovações próximas</CardTitle>
+              <p className="mt-1 text-xs text-slate-500">Alunos com 2 ou menos aulas restantes, ou pacote já concluído.</p>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="divide-y divide-slate-100">
+              {stats.renewalCandidates.map((candidate) => (
+                <Link
+                  key={candidate.id}
+                  href={`/alunos/${candidate.students?.id ?? candidate.student_id}`}
+                  className="flex flex-col gap-2 px-5 py-3 hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-800">
+                      <RotateCcw className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-slate-900">{candidate.students?.nome_completo ?? "Aluno"}</p>
+                      <p className="text-xs text-slate-500">{candidate.packages?.nome ?? "Pacote"}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 pl-12 sm:pl-0">
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-amber-800">{candidate.aulas_restantes}</p>
+                      <p className="text-[11px] text-slate-500">aulas restantes</p>
+                    </div>
+                    <StatusBadge status={candidate.status} />
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

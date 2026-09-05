@@ -62,6 +62,7 @@ export interface TrainerProfile {
   foto_url: string | null;
   cor_principal: string;
   timezone: string;
+  cancelamento_antecedencia_horas: number;
   created_at: string;
   updated_at: string;
 }
@@ -259,6 +260,7 @@ export interface TrainingSession {
   trainer_id: string;
   student_id: string;
   schedule_id: string | null;
+  student_package_id: string | null;
   data: string; // "YYYY-MM-DD"
   horario: string; // "HH:mm:ss"
   status: TrainingSessionStatus;

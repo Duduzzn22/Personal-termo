@@ -3,6 +3,10 @@ import type { TrainingSchedule, TrainingSession, TrainingSessionStatus } from "@
 
 type WithStudentName<T> = T & { students: { nome_completo: string } | null };
 
+export type TrainingSessionWithPackage = TrainingSession & {
+  student_packages: { packages: { nome: string } | null } | null;
+};
+
 export class AgendaRepository {
   constructor(private db: SupabaseClient) {}
 
@@ -76,15 +80,17 @@ export class AgendaRepository {
     return rows as WithStudentName<TrainingSession>[];
   }
 
-  async listSessionsByStudent(trainerId: string, studentId: string) {
+  async listSessionsByStudent(trainerId: string, studentId: string, limit = 30) {
     const { data, error } = await this.db
       .from("training_sessions")
-      .select("*")
+      .select("*, student_packages(packages(nome))")
       .eq("trainer_id", trainerId)
       .eq("student_id", studentId)
-      .order("data", { ascending: false });
+      .order("data", { ascending: false })
+      .order("horario", { ascending: false })
+      .limit(limit);
     if (error) throw error;
-    return data as TrainingSession[];
+    return data as unknown as TrainingSessionWithPackage[];
   }
 
   async updateSession(trainerId: string, id: string, input: Partial<TrainingSession>) {

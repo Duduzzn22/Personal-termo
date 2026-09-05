@@ -32,6 +32,7 @@ const STATUS_TONE: Record<string, Tone> = {
   ativo: "green",
   aceito: "green",
   publicado: "green",
+  pago: "green",
   agendado: "blue",
   inativo: "slate",
   arquivado: "slate",
@@ -39,6 +40,7 @@ const STATUS_TONE: Record<string, Tone> = {
   pendente: "amber",
   nova_versao_pendente: "amber",
   expirado: "red",
+  vencido: "red",
   cancelado: "red",
   concluido: "blue",
 };
@@ -47,6 +49,7 @@ const STATUS_LABEL: Record<string, string> = {
   ativo: "Ativo",
   aceito: "Aceito",
   publicado: "Publicado",
+  pago: "Pago",
   agendado: "Agendado",
   inativo: "Inativo",
   arquivado: "Arquivado",
@@ -54,6 +57,7 @@ const STATUS_LABEL: Record<string, string> = {
   pendente: "Aguardando",
   nova_versao_pendente: "Nova versão pendente",
   expirado: "Expirado",
+  vencido: "Vencido",
   cancelado: "Cancelado",
   concluido: "Concluído",
 };
