@@ -23,7 +23,7 @@ create table payments (
   unique (student_package_id),
   check (
     (status = 'pago' and data_pagamento is not null and metodo is not null)
-    or (status <> 'pago')
+    or (status <> 'pago' and data_pagamento is null and metodo is null)
   )
 );
 
@@ -37,6 +37,30 @@ create index idx_payments_payment_date on payments(trainer_id, data_pagamento);
 
 create trigger trg_payments_updated_at before update on payments
   for each row execute function set_updated_at();
+
+-- Garante que a cobrança nunca possa apontar para aluno/pacote contratado de
+-- outro tenant, mesmo que alguém tente inserir IDs manualmente pela API.
+create or replace function validate_payment_ownership()
+returns trigger as $$
+begin
+  perform 1
+    from student_packages sp
+   where sp.id = new.student_package_id
+     and sp.trainer_id = new.trainer_id
+     and sp.student_id = new.student_id;
+
+  if not found then
+    raise exception 'A cobrança deve pertencer ao mesmo personal, aluno e pacote contratado.';
+  end if;
+
+  return new;
+end;
+$$ language plpgsql;
+
+create trigger trg_validate_payment_ownership
+  before insert or update of trainer_id, student_id, student_package_id
+  on payments
+  for each row execute function validate_payment_ownership();
 
 -- -----------------------------------------------------------------------------
 -- RLS: mesmo isolamento multi-tenant do restante do SaaS e compatível com o
@@ -72,7 +96,7 @@ begin
     raise exception 'Pacote da contratação não encontrado para gerar cobrança.';
   end if;
 
-  v_data_vencimento := coalesce(new.data_inicio, current_date);
+  v_data_vencimento := coalesce(new.data_inicio, new.created_at::date);
 
   insert into payments (
     trainer_id,
