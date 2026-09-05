@@ -10,6 +10,8 @@ import { StudentPackagesRepository } from "@/lib/repositories/student-packages.r
 import { PhysicalAssessmentsRepository } from "@/lib/repositories/physical-assessments.repository";
 import { WorkoutPlansRepository } from "@/lib/repositories/workout-plans.repository";
 import { StudentDetailClient } from "@/components/students/StudentDetailClient";
+import { StudentPortalAccessCard } from "@/components/portal/StudentPortalAccessCard";
+import type { StudentPortalAccount } from "@/types/student-portal";
 
 export default async function StudentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -25,13 +27,14 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
   const student = await students.getById(userId, id);
   if (!student) notFound();
 
-  const [studentInvitations, schedules, contractedPackages, sessions, assessments, workouts] = await Promise.all([
+  const [studentInvitations, schedules, contractedPackages, sessions, assessments, workouts, portalResult] = await Promise.all([
     invitations.list(userId).then((all) => all.filter((inv: { student_id: string }) => inv.student_id === id)),
     agenda.listSchedulesByStudent(userId, id),
     studentPackages.listByStudent(userId, id),
     agenda.listSessionsByStudent(userId, id),
     physicalAssessments.listByStudent(userId, id),
     workoutPlans.listByStudent(userId, id),
+    db.from("student_portal_accounts").select("*").eq("trainer_id", userId).eq("student_id", id).maybeSingle(),
   ]);
 
   return (
@@ -47,6 +50,10 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
         sessions={sessions}
         assessments={assessments}
         workouts={workouts}
+      />
+      <StudentPortalAccessCard
+        student={student}
+        account={(portalResult.data as StudentPortalAccount | null) ?? null}
       />
     </div>
   );

@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATH_PREFIXES = ["/login", "/cadastro", "/aceite", "/api/aceite", "/api/pdf"];
+const PUBLIC_PATH_PREFIXES = ["/login", "/cadastro", "/aceite", "/api/aceite", "/api/pdf", "/portal/login", "/auth/callback"];
 
 function isPublicPath(pathname: string) {
   if (pathname === "/") return true;
@@ -9,9 +9,8 @@ function isPublicPath(pathname: string) {
 }
 
 /**
- * Atualiza a sessão Supabase a cada requisição e protege as rotas do painel
- * do personal trainer. Rotas públicas (login, cadastro, página do aluno,
- * geração de PDF) ficam de fora da checagem de autenticação.
+ * Atualiza a sessão Supabase e separa os dois contextos autenticados:
+ * personal/admin -> painel principal; aluno -> /portal.
  */
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -27,27 +26,47 @@ export async function updateSession(request: NextRequest) {
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           response = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
-          );
+          cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
         },
       },
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+  const { data: { user } } = await supabase.auth.getUser();
   const { pathname } = request.nextUrl;
+  const isStudent = user?.app_metadata?.role === "student";
 
-  if (!user && !isPublicPath(pathname)) {
-    const redirectUrl = new URL("/login", request.url);
-    redirectUrl.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(redirectUrl);
+  if (!user) {
+    if (pathname.startsWith("/portal") && pathname !== "/portal/login") {
+      return NextResponse.redirect(new URL("/portal/login", request.url));
+    }
+
+    if (!isPublicPath(pathname)) {
+      const redirectUrl = new URL("/login", request.url);
+      redirectUrl.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(redirectUrl);
+    }
+
+    return response;
   }
 
-  if (user && (pathname === "/login" || pathname === "/cadastro")) {
+  if (isStudent) {
+    if (pathname === "/login" || pathname === "/cadastro" || pathname === "/portal/login") {
+      return NextResponse.redirect(new URL("/portal", request.url));
+    }
+
+    if (!pathname.startsWith("/portal") && !isPublicPath(pathname)) {
+      return NextResponse.redirect(new URL("/portal", request.url));
+    }
+
+    return response;
+  }
+
+  if (pathname.startsWith("/portal")) {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+
+  if (pathname === "/login" || pathname === "/cadastro") {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
