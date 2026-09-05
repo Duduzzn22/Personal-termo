@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Package, FileText, CheckSquare, Calendar, CalendarClock, AlertTriangle, MessageCircle, Settings, Dumbbell, WalletCards, X } from "lucide-react";
+import { LayoutDashboard, Users, Package, FileText, CheckSquare, Calendar, CalendarClock, AlertTriangle, MessageCircle, BrainCircuit, Settings, Dumbbell, WalletCards, X } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Visão Geral", icon: LayoutDashboard },
   { href: "/alunos", label: "Alunos", icon: Users },
   { href: "/radar", label: "Radar de Alunos", icon: AlertTriangle },
+  { href: "/ia", label: "IA do Personal", icon: BrainCircuit },
   { href: "/pacotes", label: "Pacotes", icon: Package },
   { href: "/agenda", label: "Agenda", icon: Calendar },
   { href: "/solicitacoes", label: "Solicitações", icon: CalendarClock },
