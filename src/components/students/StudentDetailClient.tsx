@@ -12,12 +12,14 @@ import { StudentScheduleCard } from "./StudentScheduleCard";
 import { StudentPackagesCard } from "./StudentPackagesCard";
 import { StudentSessionHistoryCard } from "./StudentSessionHistoryCard";
 import { StudentAssessmentsCard } from "./StudentAssessmentsCard";
+import { StudentWorkoutsCard } from "./StudentWorkoutsCard";
 import { SendTermModal } from "@/components/invitations/SendTermModal";
 import { archiveStudentAction } from "@/lib/actions/students.actions";
 import { formatCPF, formatDateBR, formatPhone, initials } from "@/lib/utils/format";
 import type { StudentPackageWithPackage } from "@/lib/repositories/student-packages.repository";
 import type { TrainingSessionWithPackage } from "@/lib/repositories/agenda.repository";
 import type { PhysicalAssessment } from "@/types/assessment";
+import type { WorkoutPlanWithStudent } from "@/types/workout";
 import type { Student, TrainingSchedule } from "@/types/database";
 
 interface InvitationRow {
@@ -35,6 +37,7 @@ export function StudentDetailClient({
   studentPackages,
   sessions,
   assessments,
+  workouts,
 }: {
   student: Student;
   invitations: InvitationRow[];
@@ -42,6 +45,7 @@ export function StudentDetailClient({
   studentPackages: StudentPackageWithPackage[];
   sessions: TrainingSessionWithPackage[];
   assessments: PhysicalAssessment[];
+  workouts: WorkoutPlanWithStudent[];
 }) {
   const [editOpen, setEditOpen] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
@@ -130,6 +134,8 @@ export function StudentDetailClient({
       <StudentSessionHistoryCard sessions={sessions} />
 
       <StudentAssessmentsCard studentId={student.id} assessments={assessments} />
+
+      <StudentWorkoutsCard plans={workouts} />
 
       <Card>
         <CardHeader>
