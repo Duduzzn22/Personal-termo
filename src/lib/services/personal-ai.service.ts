@@ -4,6 +4,11 @@ import { buildStudentRadar } from "@/lib/services/student-risk.service";
 import { addDaysISO, todayISO } from "@/lib/utils/agenda";
 import { formatCurrencyFromCents } from "@/lib/utils/format";
 
+function firstRelation<T>(value: T | T[] | null | undefined): T | null {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
+}
+
 export async function buildPersonalAiContext(db: SupabaseClient, trainerId: string, trainerName: string) {
   const today = todayISO();
   const weekEnd = addDaysISO(today, 7);
@@ -16,18 +21,22 @@ export async function buildPersonalAiContext(db: SupabaseClient, trainerId: stri
     db.from("session_change_requests").select("request_type,status,occurrence_date,requested_date,students(nome_completo)").eq("trainer_id", trainerId).eq("status", "pendente").order("created_at", { ascending: false }).limit(30),
   ]);
 
-  const pendingPayments = (paymentsRes.data ?? []).map((p) => ({
-    aluno: p.students?.nome_completo ?? "Aluno",
-    valor: formatCurrencyFromCents(Number(p.valor_centavos ?? 0)),
-    vencimento: p.data_vencimento,
-    atrasado: p.data_vencimento < today,
-  }));
+  const pendingPayments = (paymentsRes.data ?? []).map((p) => {
+    const student = firstRelation<{ nome_completo?: string }>(p.students);
+    return {
+      aluno: student?.nome_completo ?? "Aluno",
+      valor: formatCurrencyFromCents(Number(p.valor_centavos ?? 0)),
+      vencimento: p.data_vencimento,
+      atrasado: p.data_vencimento < today,
+    };
+  });
 
   const packageRows = (packagesRes.data ?? []).slice(0, 100).map((p) => {
-    const pkg = p.packages as { nome?: string; quantidade_aulas?: number } | null;
+    const pkg = firstRelation<{ nome?: string; quantidade_aulas?: number }>(p.packages);
+    const student = firstRelation<{ nome_completo?: string }>(p.students);
     const total = Number(pkg?.quantidade_aulas ?? 0);
     return {
-      aluno: p.students?.nome_completo ?? "Aluno",
+      aluno: student?.nome_completo ?? "Aluno",
       pacote: pkg?.nome ?? "Pacote",
       status: p.status,
       realizadas: Number(p.aulas_realizadas ?? 0),
