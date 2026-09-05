@@ -48,6 +48,31 @@ create trigger trg_physical_assessments_updated_at
   before update on physical_assessments
   for each row execute function set_updated_at();
 
+-- Impede vínculo entre uma avaliação e aluno de outro tenant, mesmo que IDs
+-- sejam enviados manualmente à Data API.
+create or replace function validate_physical_assessment_ownership()
+returns trigger as $$
+begin
+  perform 1
+    from students s
+   where s.id = new.student_id
+     and s.trainer_id = new.trainer_id;
+
+  if not found then
+    raise exception 'A avaliação física deve pertencer ao mesmo personal do aluno.';
+  end if;
+
+  return new;
+end;
+$$ language plpgsql;
+
+revoke all on function validate_physical_assessment_ownership() from public, anon, authenticated;
+
+create trigger trg_validate_physical_assessment_ownership
+  before insert or update of trainer_id, student_id
+  on physical_assessments
+  for each row execute function validate_physical_assessment_ownership();
+
 -- Data API: apenas usuários autenticados e service role; nunca acesso anônimo.
 grant select, insert, update, delete on table physical_assessments to authenticated, service_role;
 revoke all on table physical_assessments from anon;
