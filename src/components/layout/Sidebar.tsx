@@ -11,6 +11,7 @@ import {
   Calendar,
   Settings,
   Dumbbell,
+  WalletCards,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
@@ -19,9 +20,10 @@ const NAV_ITEMS = [
   { href: "/dashboard", label: "Visão Geral", icon: LayoutDashboard },
   { href: "/alunos", label: "Alunos", icon: Users },
   { href: "/pacotes", label: "Pacotes", icon: Package },
+  { href: "/agenda", label: "Agenda", icon: Calendar },
+  { href: "/financeiro", label: "Financeiro", icon: WalletCards },
   { href: "/termos", label: "Termos", icon: FileText },
   { href: "/aceites", label: "Aceites", icon: CheckSquare },
-  { href: "/agenda", label: "Agenda", icon: Calendar },
   { href: "/configuracoes", label: "Configurações", icon: Settings },
 ];
 
