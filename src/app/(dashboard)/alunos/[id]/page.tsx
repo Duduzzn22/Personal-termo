@@ -21,10 +21,11 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
   const student = await students.getById(userId, id);
   if (!student) notFound();
 
-  const [studentInvitations, schedules, contractedPackages] = await Promise.all([
+  const [studentInvitations, schedules, contractedPackages, sessions] = await Promise.all([
     invitations.list(userId).then((all) => all.filter((inv: { student_id: string }) => inv.student_id === id)),
     agenda.listSchedulesByStudent(userId, id),
     studentPackages.listByStudent(userId, id),
+    agenda.listSessionsByStudent(userId, id),
   ]);
 
   return (
@@ -37,6 +38,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
         invitations={studentInvitations}
         schedules={schedules}
         studentPackages={contractedPackages}
+        sessions={sessions}
       />
     </div>
   );
