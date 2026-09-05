@@ -25,20 +25,21 @@ export function SendTermModal({
   open,
   onClose,
   preselectedStudentId,
+  preselectedPackageId,
   preselectedTermVersionId,
 }: {
   open: boolean;
   onClose: () => void;
   preselectedStudentId?: string;
+  preselectedPackageId?: string;
   preselectedTermVersionId?: string;
 }) {
-  // Só monta o conteúdo quando o modal está aberto: isso garante que cada
-  // abertura comece com estado limpo (sem precisar "resetar" via effect).
   if (!open) return null;
   return (
     <SendTermModalContent
       onClose={onClose}
       preselectedStudentId={preselectedStudentId}
+      preselectedPackageId={preselectedPackageId}
       preselectedTermVersionId={preselectedTermVersionId}
     />
   );
@@ -47,10 +48,12 @@ export function SendTermModal({
 function SendTermModalContent({
   onClose,
   preselectedStudentId,
+  preselectedPackageId,
   preselectedTermVersionId,
 }: {
   onClose: () => void;
   preselectedStudentId?: string;
+  preselectedPackageId?: string;
   preselectedTermVersionId?: string;
 }) {
   const open = true;
@@ -84,8 +87,6 @@ function SendTermModalContent({
   function sendViaWhatsApp() {
     if (!state.link) return;
     const mensagem = `Olá! Segue o link para você revisar e confirmar o termo de ciência e aceite:\n${state.link}`;
-    // Sem número fixo: o WhatsApp abre e o próprio usuário escolhe o contato/conversa
-    // para onde enviar, com a mensagem já pré-preenchida.
     window.open(`https://wa.me/?text=${encodeURIComponent(mensagem)}`, "_blank", "noopener,noreferrer");
   }
 
@@ -152,7 +153,7 @@ function SendTermModalContent({
               </option>
             ))}
           </Select>
-          <Select label="Pacote" name="package_id" required defaultValue="">
+          <Select label="Pacote" name="package_id" required defaultValue={preselectedPackageId ?? ""}>
             <option value="" disabled>
               Selecione um pacote
             </option>
