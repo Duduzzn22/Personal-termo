@@ -54,7 +54,7 @@ const STATUS_LABEL: Record<string, string> = {
   inativo: "Inativo",
   arquivado: "Arquivado",
   rascunho: "Rascunho",
-  pendente: "Pendente",
+  pendente: "Aguardando",
   nova_versao_pendente: "Nova versão pendente",
   expirado: "Expirado",
   vencido: "Vencido",
