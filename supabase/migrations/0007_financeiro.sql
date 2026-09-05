@@ -7,11 +7,6 @@
 create type payment_status as enum ('pendente', 'pago', 'cancelado');
 create type payment_method as enum ('pix', 'dinheiro', 'cartao', 'transferencia', 'outro');
 
-alter type audit_event_type add value if not exists 'pagamento_criado';
-alter type audit_event_type add value if not exists 'pagamento_atualizado';
-alter type audit_event_type add value if not exists 'pagamento_recebido';
-alter type audit_event_type add value if not exists 'pagamento_cancelado';
-
 create table payments (
   id uuid primary key default gen_random_uuid(),
   trainer_id uuid not null references trainer_profiles(id) on delete cascade,
@@ -27,7 +22,7 @@ create table payments (
   updated_at timestamptz not null default now(),
   unique (student_package_id),
   check (
-    (status = 'pago' and data_pagamento is not null)
+    (status = 'pago' and data_pagamento is not null and metodo is not null)
     or (status <> 'pago')
   )
 );
@@ -43,10 +38,17 @@ create index idx_payments_payment_date on payments(trainer_id, data_pagamento);
 create trigger trg_payments_updated_at before update on payments
   for each row execute function set_updated_at();
 
+-- -----------------------------------------------------------------------------
+-- RLS: mesmo isolamento multi-tenant do restante do SaaS e compatível com o
+-- perfil administrativo criado em 0005_admin_access.sql.
+-- -----------------------------------------------------------------------------
+
 alter table payments enable row level security;
 
 create policy payments_all_own on payments
-  for all using (trainer_id = auth.uid()) with check (trainer_id = auth.uid());
+  for all
+  using (trainer_id = auth.uid() or is_managing_trainer(trainer_id))
+  with check (trainer_id = auth.uid() or is_managing_trainer(trainer_id));
 
 -- -----------------------------------------------------------------------------
 -- PACOTE CONTRATADO -> COBRANÇA
@@ -98,14 +100,20 @@ create trigger trg_create_payment_after_student_package
   after insert on student_packages
   for each row execute function create_payment_after_student_package();
 
--- Backfill: cria cobrança para pacotes contratados que já existiam antes do módulo.
+-- -----------------------------------------------------------------------------
+-- BACKFILL
+-- Pacotes contratados antes deste módulo também recebem uma cobrança pendente
+-- para que o personal revise e marque como pago/cancelado conforme a realidade.
+-- -----------------------------------------------------------------------------
+
 insert into payments (
   trainer_id,
   student_id,
   student_package_id,
   valor_centavos,
   data_vencimento,
-  status
+  status,
+  observacoes
 )
 select
   sp.trainer_id,
@@ -113,7 +121,8 @@ select
   sp.id,
   p.valor_centavos,
   coalesce(sp.data_inicio, sp.created_at::date),
-  'pendente'::payment_status
+  'pendente'::payment_status,
+  'Cobrança criada automaticamente na ativação do módulo financeiro. Revise o status deste pagamento.'
 from student_packages sp
 join packages p on p.id = sp.package_id
 left join payments pay on pay.student_package_id = sp.id
