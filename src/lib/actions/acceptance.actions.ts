@@ -13,8 +13,8 @@ export interface AcceptActionState {
 
 function getClientIp(h: Headers): string | null {
   const forwarded = h.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0].trim();
-  return h.get("x-real-ip");
+  const value = forwarded ? forwarded.split(",")[0].trim() : h.get("x-real-ip");
+  return value ? value.slice(0, 64) : null;
 }
 
 export async function acceptInvitationAction(
@@ -38,11 +38,11 @@ export async function acceptInvitationAction(
     const { acceptance } = await acceptInvitation(adminDb, {
       token,
       ipAddress: getClientIp(h),
-      userAgent: h.get("user-agent"),
+      userAgent: h.get("user-agent")?.slice(0, 512) ?? null,
       timezone: process.env.NEXT_PUBLIC_DEFAULT_TIMEZONE || "America/Sao_Paulo",
     });
     // Falha no envio de e-mail nunca deve impedir a confirmação do aceite.
-    await sendAcceptanceConfirmationEmail(acceptance).catch(() => null);
+    await sendAcceptanceConfirmationEmail(acceptance, token).catch(() => null);
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Não foi possível registrar o aceite." };
   }
