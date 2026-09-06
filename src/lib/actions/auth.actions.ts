@@ -14,6 +14,14 @@ function appBaseUrl() {
   return (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
 }
 
+function oauthBaseUrl() {
+  if (process.env.VERCEL_ENV === "preview" && process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+
+  return appBaseUrl();
+}
+
 export async function signInAction(
   _prevState: AuthActionState,
   formData: FormData
@@ -37,7 +45,7 @@ export async function signInAction(
 
 export async function signInWithGoogleAction() {
   const supabase = await createClient();
-  const redirectTo = `${appBaseUrl()}/auth/callback?next=/dashboard`;
+  const redirectTo = `${oauthBaseUrl()}/auth/callback?next=/dashboard`;
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
