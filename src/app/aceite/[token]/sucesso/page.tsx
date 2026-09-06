@@ -44,7 +44,7 @@ export default async function AcceptanceSuccessPage({ params }: { params: Promis
         </div>
 
         <a
-          href={`/api/pdf/${acceptance.id}`}
+          href={`/api/pdf/${acceptance.id}?token=${encodeURIComponent(token)}`}
           className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-slate-900 text-sm font-medium text-white hover:bg-slate-800"
         >
           <Download className="h-4 w-4" /> Baixar comprovante

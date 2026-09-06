@@ -9,6 +9,15 @@ function getResendClient() {
   return new Resend(apiKey);
 }
 
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 function acceptanceEmailHtml(params: {
   alunoNome: string;
   protocolo: string;
@@ -20,24 +29,24 @@ function acceptanceEmailHtml(params: {
   <div style="font-family: -apple-system, Helvetica, Arial, sans-serif; max-width: 480px; margin: 0 auto; color: #1e293b;">
     <h2 style="font-size: 18px; margin-bottom: 4px;">Seu aceite foi registrado</h2>
     <p style="font-size: 14px; color: #475569; line-height: 1.6;">
-      Olá, ${params.alunoNome}.<br/><br/>
+      Olá, ${escapeHtml(params.alunoNome)}.<br/><br/>
       Seu aceite das condições do serviço de Personal Training foi registrado com sucesso.
     </p>
     <table style="width: 100%; font-size: 13px; margin: 20px 0; border-collapse: collapse;">
       <tr>
         <td style="padding: 6px 0; color: #94a3b8;">Protocolo</td>
-        <td style="padding: 6px 0; font-weight: 600;">${params.protocolo}</td>
+        <td style="padding: 6px 0; font-weight: 600;">${escapeHtml(params.protocolo)}</td>
       </tr>
       <tr>
         <td style="padding: 6px 0; color: #94a3b8;">Data</td>
-        <td style="padding: 6px 0; font-weight: 600;">${params.data}</td>
+        <td style="padding: 6px 0; font-weight: 600;">${escapeHtml(params.data)}</td>
       </tr>
       <tr>
         <td style="padding: 6px 0; color: #94a3b8;">Personal</td>
-        <td style="padding: 6px 0; font-weight: 600;">${params.personalNome}</td>
+        <td style="padding: 6px 0; font-weight: 600;">${escapeHtml(params.personalNome)}</td>
       </tr>
     </table>
-    <a href="${params.comprovanteUrl}" style="display: inline-block; background: #0f172a; color: #fff; text-decoration: none; padding: 12px 20px; border-radius: 10px; font-size: 14px; font-weight: 600;">
+    <a href="${escapeHtml(params.comprovanteUrl)}" style="display: inline-block; background: #0f172a; color: #fff; text-decoration: none; padding: 12px 20px; border-radius: 10px; font-size: 14px; font-weight: 600;">
       Ver / baixar comprovante
     </a>
     <p style="font-size: 11px; color: #94a3b8; margin-top: 24px;">
@@ -47,19 +56,19 @@ function acceptanceEmailHtml(params: {
 }
 
 /**
- * Envia o e-mail de confirmação de aceite. Falha de forma silenciosa (apenas
- * loga) quando RESEND_API_KEY não está configurada ou o aluno não possui
- * e-mail — o registro do aceite em si nunca depende do envio de e-mail.
+ * Envia o e-mail de confirmação de aceite. O link público usa o mesmo bearer
+ * token criptograficamente seguro do convite, em vez de expor apenas o UUID do
+ * registro de aceite.
  */
-export async function sendAcceptanceConfirmationEmail(acceptance: Acceptance) {
+export async function sendAcceptanceConfirmationEmail(acceptance: Acceptance, invitationToken: string) {
   const snapshot = acceptance.document_snapshot as DocumentSnapshot;
   if (!snapshot.aluno.email) return { sent: false, reason: "sem_email" as const };
 
   const resend = getResendClient();
   if (!resend) return { sent: false, reason: "resend_nao_configurado" as const };
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  const comprovanteUrl = `${appUrl}/api/pdf/${acceptance.id}`;
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
+  const comprovanteUrl = `${appUrl}/aceite/${encodeURIComponent(invitationToken)}/sucesso`;
 
   try {
     await resend.emails.send({

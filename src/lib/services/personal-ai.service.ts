@@ -8,6 +8,7 @@ export type StudentAlias = {
   studentId: string;
   alias: string;
   realName: string;
+  identifiers: string[];
 };
 
 function firstRelation<T>(value: T | T[] | null | undefined): T | null {
@@ -24,10 +25,47 @@ function replaceCaseInsensitive(text: string, from: string, to: string) {
   return text.replace(new RegExp(escapeRegExp(from), "gi"), to);
 }
 
+function replaceWholeWordCaseInsensitive(text: string, from: string, to: string) {
+  if (!from.trim()) return text;
+  const pattern = `(?<![\\p{L}\\p{N}_])${escapeRegExp(from)}(?![\\p{L}\\p{N}_])`;
+  return text.replace(new RegExp(pattern, "giu"), to);
+}
+
 function anonymizeText(text: string, aliases: StudentAlias[]) {
-  return [...aliases]
+  let result = [...aliases]
     .sort((a, b) => b.realName.length - a.realName.length)
-    .reduce((result, item) => replaceCaseInsensitive(result, item.realName, item.alias), text);
+    .reduce((current, item) => replaceCaseInsensitive(current, item.realName, item.alias), text);
+
+  // Também remove identificadores exatos conhecidos que o personal possa ter
+  // digitado livremente na pergunta (e-mail, telefone ou WhatsApp).
+  const identifiers = aliases.flatMap((item) =>
+    item.identifiers.map((value) => ({ value, alias: item.alias }))
+  );
+  result = identifiers
+    .filter((item) => item.value.trim().length >= 5)
+    .sort((a, b) => b.value.length - a.value.length)
+    .reduce((current, item) => replaceCaseInsensitive(current, item.value, item.alias), result);
+
+  // Se o primeiro nome for único entre os alunos, anonimiza também perguntas
+  // como "como está o João?". Nomes repetidos não são substituídos para evitar
+  // associar a pergunta ao aluno errado.
+  const firstNameCounts = new Map<string, number>();
+  for (const item of aliases) {
+    const firstName = item.realName.trim().split(/\s+/)[0] ?? "";
+    if (firstName.length < 3) continue;
+    const key = firstName.toLocaleLowerCase("pt-BR");
+    firstNameCounts.set(key, (firstNameCounts.get(key) ?? 0) + 1);
+  }
+
+  for (const item of aliases) {
+    const firstName = item.realName.trim().split(/\s+/)[0] ?? "";
+    const key = firstName.toLocaleLowerCase("pt-BR");
+    if (firstName.length >= 3 && firstNameCounts.get(key) === 1) {
+      result = replaceWholeWordCaseInsensitive(result, firstName, item.alias);
+    }
+  }
+
+  return result;
 }
 
 function restoreStudentNames(text: string, aliases: StudentAlias[]) {
@@ -40,7 +78,7 @@ export async function buildPersonalAiContext(db: SupabaseClient, trainerId: stri
   const today = todayISO();
   const weekEnd = addDaysISO(today, 7);
   const [studentsRes, radar, sessionsRes, schedulesRes, paymentsRes, packagesRes, requestsRes] = await Promise.all([
-    db.from("students").select("id,nome_completo").eq("trainer_id", trainerId).order("nome_completo"),
+    db.from("students").select("id,nome_completo,email,telefone,whatsapp").eq("trainer_id", trainerId).order("nome_completo"),
     buildStudentRadar(db, trainerId),
     db.from("training_sessions").select("student_id,data,horario,status").eq("trainer_id", trainerId).gte("data", today).lte("data", weekEnd).order("data").order("horario"),
     db.from("training_schedules").select("student_id,dia_semana,horario").eq("trainer_id", trainerId).eq("ativo", true).order("dia_semana").order("horario"),
@@ -56,6 +94,9 @@ export async function buildPersonalAiContext(db: SupabaseClient, trainerId: stri
     studentId: String(student.id),
     alias: `Aluno ${index + 1}`,
     realName: String(student.nome_completo || `Aluno ${index + 1}`),
+    identifiers: [student.email, student.telefone, student.whatsapp]
+      .filter((value): value is string => Boolean(value?.trim()))
+      .map((value) => value.trim()),
   }));
   const aliasByStudentId = new Map(aliases.map((item) => [item.studentId, item.alias]));
   const aliasFor = (studentId: unknown) => aliasByStudentId.get(String(studentId ?? "")) ?? "Aluno";
@@ -72,7 +113,7 @@ export async function buildPersonalAiContext(db: SupabaseClient, trainerId: stri
     const total = Number(pkg?.quantidade_aulas ?? 0);
     return {
       aluno: aliasFor(p.student_id),
-      pacote: pkg?.nome ?? "Pacote",
+      pacote: anonymizeText(pkg?.nome ?? "Pacote", aliases),
       status: p.status,
       realizadas: Number(p.aulas_realizadas ?? 0),
       restantes: Math.max(total - Number(p.aulas_realizadas ?? 0), 0),
@@ -87,8 +128,8 @@ export async function buildPersonalAiContext(db: SupabaseClient, trainerId: stri
       aluno: aliasFor(r.studentId),
       score: r.score,
       nivel: r.level,
-      motivos: r.reasons.map((reason) => reason.label),
-      recomendacao_regra: r.recommendation,
+      motivos: r.reasons.map((reason) => anonymizeText(reason.label, aliases)),
+      recomendacao_regra: anonymizeText(r.recommendation, aliases),
     })),
     agenda_sessoes_7_dias: (sessionsRes.data ?? []).map((s) => ({
       aluno: aliasFor(s.student_id),
