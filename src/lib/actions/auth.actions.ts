@@ -7,6 +7,8 @@ export interface AuthActionState {
   error?: string;
 }
 
+const MIN_PASSWORD_LENGTH = 10;
+
 export async function signInAction(
   _prevState: AuthActionState,
   formData: FormData
@@ -33,11 +35,11 @@ export async function signUpAction(
   formData: FormData
 ): Promise<AuthActionState> {
   const nome = String(formData.get("nome_profissional") || "").trim();
-  const email = String(formData.get("email") || "").trim();
+  const email = String(formData.get("email") || "").trim().toLowerCase();
   const password = String(formData.get("password") || "");
 
-  if (!nome || !email || password.length < 6) {
-    return { error: "Preencha nome, e-mail e uma senha com ao menos 6 caracteres." };
+  if (!nome || !email || password.length < MIN_PASSWORD_LENGTH) {
+    return { error: `Preencha nome, e-mail e uma senha com ao menos ${MIN_PASSWORD_LENGTH} caracteres.` };
   }
 
   const supabase = await createClient();
