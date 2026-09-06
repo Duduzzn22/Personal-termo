@@ -8,6 +8,7 @@ export interface AuthActionState {
 }
 
 const MIN_PASSWORD_LENGTH = 10;
+const STRONG_PASSWORD = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).+$/;
 
 function appBaseUrl() {
   return (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
@@ -64,8 +65,14 @@ export async function signUpAction(
   const email = String(formData.get("email") || "").trim().toLowerCase();
   const password = String(formData.get("password") || "");
 
-  if (!nome || !email || password.length < MIN_PASSWORD_LENGTH) {
-    return { error: `Preencha nome, e-mail e uma senha com ao menos ${MIN_PASSWORD_LENGTH} caracteres.` };
+  if (!nome || !email) {
+    return { error: "Preencha nome profissional e e-mail." };
+  }
+
+  if (password.length < MIN_PASSWORD_LENGTH || !STRONG_PASSWORD.test(password)) {
+    return {
+      error: `A senha deve ter ao menos ${MIN_PASSWORD_LENGTH} caracteres, com maiúscula, minúscula, número e símbolo.`,
+    };
   }
 
   const supabase = await createClient();
