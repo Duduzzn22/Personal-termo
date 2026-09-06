@@ -1,7 +1,17 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATH_PREFIXES = ["/login", "/cadastro", "/aceite", "/api/aceite", "/api/pdf", "/portal/login", "/auth/callback"];
+// /api/pdf valida bearer token ou RLS dentro da própria rota.
+// /api/cron valida CRON_SECRET dentro da própria rota.
+const PUBLIC_PATH_PREFIXES = [
+  "/login",
+  "/cadastro",
+  "/aceite",
+  "/api/pdf",
+  "/api/cron",
+  "/portal/login",
+  "/auth/callback",
+];
 
 function isPublicPath(pathname: string) {
   if (pathname === "/") return true;
