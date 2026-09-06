@@ -28,8 +28,8 @@ export default function CadastroPage() {
             name="password"
             type="password"
             required
-            minLength={6}
-            hint="Mínimo de 6 caracteres."
+            minLength={10}
+            hint="Mínimo de 10 caracteres. Prefira uma senha única e longa."
             autoComplete="new-password"
           />
           {state.error && (
