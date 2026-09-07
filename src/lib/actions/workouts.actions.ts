@@ -33,6 +33,17 @@ function optionalNumber(formData: FormData, key: string, min: number, max: numbe
   return { value };
 }
 
+function weekdaysValue(formData: FormData) {
+  return Array.from(
+    new Set(
+      formData
+        .getAll("dias_semana")
+        .map((value) => Number(value))
+        .filter((value) => Number.isInteger(value) && value >= 0 && value <= 6)
+    )
+  ).sort((a, b) => a - b);
+}
+
 function scopedVideoPath(formData: FormData, trainerId: string, exerciseId: string) {
   const path = nullableString(formData, "video_path");
   if (!path) return { value: null as string | null };
@@ -121,9 +132,11 @@ export async function createWorkoutPlanAction(
 ): Promise<WorkoutActionState> {
   const nome = stringValue(formData, "nome");
   const studentId = stringValue(formData, "student_id");
+  const diasSemana = weekdaysValue(formData);
   const fieldErrors: Record<string, string> = {};
   if (nome.length < 2) fieldErrors.nome = "Informe o nome do treino.";
   if (!studentId) fieldErrors.student_id = "Selecione um aluno.";
+  if (diasSemana.length === 0) fieldErrors.dias_semana = "Selecione pelo menos um dia da semana.";
   if (Object.keys(fieldErrors).length) return { error: "Revise os campos.", fieldErrors };
 
   const start = nullableString(formData, "data_inicio");
@@ -139,12 +152,14 @@ export async function createWorkoutPlanAction(
       student_id: studentId,
       nome,
       objetivo: nullableString(formData, "objetivo"),
+      dias_semana: diasSemana,
       data_inicio: start,
       data_fim: end,
       observacoes: nullableString(formData, "observacoes"),
       status: "ativo",
     });
     revalidatePath("/treinos");
+    revalidatePath("/portal");
     return { success: true };
   } catch {
     return { error: "Não foi possível criar o plano de treino." };
@@ -158,9 +173,11 @@ export async function updateWorkoutPlanAction(
 ): Promise<WorkoutActionState> {
   const nome = stringValue(formData, "nome");
   const studentId = stringValue(formData, "student_id");
+  const diasSemana = weekdaysValue(formData);
   const fieldErrors: Record<string, string> = {};
   if (nome.length < 2) fieldErrors.nome = "Informe o nome do treino.";
   if (!studentId) fieldErrors.student_id = "Selecione um aluno.";
+  if (diasSemana.length === 0) fieldErrors.dias_semana = "Selecione pelo menos um dia da semana.";
   if (Object.keys(fieldErrors).length) return { error: "Revise os campos.", fieldErrors };
 
   const start = nullableString(formData, "data_inicio");
@@ -176,12 +193,14 @@ export async function updateWorkoutPlanAction(
       student_id: studentId,
       nome,
       objetivo: nullableString(formData, "objetivo"),
+      dias_semana: diasSemana,
       data_inicio: start,
       data_fim: end,
       observacoes: nullableString(formData, "observacoes"),
     });
     revalidatePath("/treinos");
     revalidatePath(`/treinos/${planId}`);
+    revalidatePath("/portal");
     return { success: true };
   } catch {
     return { error: "Não foi possível atualizar o plano de treino." };
@@ -194,6 +213,7 @@ export async function archiveWorkoutPlanAction(planId: string, archive: boolean)
   await new WorkoutPlansRepository(db).update(userId, planId, { status: archive ? "arquivado" : "ativo" });
   revalidatePath("/treinos");
   revalidatePath(`/treinos/${planId}`);
+  revalidatePath("/portal");
 }
 
 export async function addWorkoutItemAction(
@@ -222,6 +242,7 @@ export async function addWorkoutItemAction(
       observacoes: nullableString(formData, "observacoes"),
     });
     revalidatePath(`/treinos/${planId}`);
+    revalidatePath("/portal");
     return { success: true };
   } catch {
     return { error: "Não foi possível adicionar o exercício ao treino." };
@@ -233,4 +254,5 @@ export async function removeWorkoutItemAction(planId: string, itemId: string) {
   const db = await createClient();
   await new WorkoutPlansRepository(db).removeItem(userId, planId, itemId);
   revalidatePath(`/treinos/${planId}`);
+  revalidatePath("/portal");
 }
