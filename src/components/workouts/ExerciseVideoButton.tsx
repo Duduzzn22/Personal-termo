@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import { ExternalLink, Play, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { createClient } from "@/lib/supabase/client";
 
@@ -119,10 +118,13 @@ export function ExerciseVideoButton({
           ) : externalUrl ? (
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 text-center">
               <p className="text-sm text-slate-600">Esta referência externa não permite reprodução incorporada no site.</p>
-              <a href={externalUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex">
-                <Button type="button" variant="outline">
-                  Abrir referência <ExternalLink className="h-4 w-4" />
-                </Button>
+              <a
+                href={externalUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-3 inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Abrir referência <ExternalLink className="h-4 w-4" />
               </a>
             </div>
           ) : null}
