@@ -52,6 +52,7 @@ export async function updateWorkoutItemAction(
       observacoes: nullable(formData, "observacoes"),
     });
     revalidatePath(`/treinos/${planId}`);
+    revalidatePath("/portal");
     return { success: true };
   } catch {
     return { error: "Não foi possível atualizar a prescrição." };
