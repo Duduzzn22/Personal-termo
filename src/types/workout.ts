@@ -6,6 +6,7 @@ export interface Exercise {
   equipamento: string | null;
   instrucoes: string | null;
   video_url: string | null;
+  video_path: string | null;
   ativo: boolean;
   created_at: string;
   updated_at: string;
