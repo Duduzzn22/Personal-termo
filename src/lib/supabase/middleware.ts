@@ -44,7 +44,19 @@ export async function updateSession(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
   const { pathname } = request.nextUrl;
-  const isStudent = user?.app_metadata?.role === "student";
+
+  let hasActivePortalAccount = false;
+  if (user) {
+    const { data: portalAccount } = await supabase
+      .from("student_portal_accounts")
+      .select("id")
+      .eq("auth_user_id", user.id)
+      .eq("enabled", true)
+      .maybeSingle();
+    hasActivePortalAccount = Boolean(portalAccount);
+  }
+
+  const isStudent = user?.app_metadata?.role === "student" || hasActivePortalAccount;
 
   if (!user) {
     if (pathname.startsWith("/portal") && pathname !== "/portal/login") {
