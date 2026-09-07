@@ -23,6 +23,24 @@ function recordingFormat() {
   };
 }
 
+function cameraErrorMessage(error: unknown) {
+  if (error instanceof DOMException) {
+    if (error.name === "NotAllowedError" || error.name === "SecurityError") {
+      return "O navegador bloqueou o acesso à câmera. Libere a câmera nas permissões deste site e tente novamente.";
+    }
+    if (error.name === "NotFoundError" || error.name === "DevicesNotFoundError") {
+      return "Nenhuma câmera foi encontrada neste dispositivo.";
+    }
+    if (error.name === "NotReadableError" || error.name === "TrackStartError") {
+      return "A câmera está sendo usada por outro aplicativo ou não pôde ser iniciada.";
+    }
+    if (error.name === "OverconstrainedError") {
+      return "A câmera disponível não atende à configuração solicitada.";
+    }
+  }
+  return "Não foi possível acessar a câmera. Verifique a permissão do navegador e tente novamente.";
+}
+
 export function ExerciseVideoRecorder({
   open,
   onClose,
@@ -36,6 +54,8 @@ export function ExerciseVideoRecorder({
   const streamRef = useRef<MediaStream | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const [cameraReady, setCameraReady] = useState(false);
+  const [requestingCamera, setRequestingCamera] = useState(false);
   const [recording, setRecording] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -45,12 +65,21 @@ export function ExerciseVideoRecorder({
   function stopCamera() {
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
+    setCameraReady(false);
     if (cameraRef.current) cameraRef.current.srcObject = null;
   }
 
   async function startCamera() {
     setError(null);
+    setRequestingCamera(true);
     stopCamera();
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setError("Este navegador não oferece acesso à câmera nesta página.");
+      setRequestingCamera(false);
+      return;
+    }
+
     try {
       let stream: MediaStream;
       try {
@@ -58,19 +87,28 @@ export function ExerciseVideoRecorder({
           video: { facingMode: { ideal: "environment" } },
           audio: true,
         });
-      } catch {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: "environment" } },
-          audio: false,
-        });
+      } catch (firstError) {
+        // Se o microfone não estiver disponível, ainda permitimos gravar somente vídeo.
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: "environment" } },
+            audio: false,
+          });
+        } catch {
+          throw firstError;
+        }
       }
+
       streamRef.current = stream;
+      setCameraReady(true);
       if (cameraRef.current) {
         cameraRef.current.srcObject = stream;
         await cameraRef.current.play().catch(() => undefined);
       }
-    } catch {
-      setError("Não foi possível acessar a câmera. Verifique a permissão do navegador.");
+    } catch (cameraError) {
+      setError(cameraErrorMessage(cameraError));
+    } finally {
+      setRequestingCamera(false);
     }
   }
 
@@ -125,7 +163,8 @@ export function ExerciseVideoRecorder({
     setPreviewUrl(null);
     setRecordedFile(null);
     setSeconds(0);
-    void startCamera();
+    stopCamera();
+    setError(null);
   }
 
   function useRecording() {
@@ -139,12 +178,13 @@ export function ExerciseVideoRecorder({
     setRecordedFile(null);
     setSeconds(0);
     setError(null);
-    void startCamera();
+    setCameraReady(false);
+    setRequestingCamera(false);
     return () => {
       if (recorderRef.current?.state === "recording") recorderRef.current.stop();
       stopCamera();
     };
-    // startCamera/stopCamera intentionally remain local to this component lifecycle.
+    // stopCamera intentionally remains local to this component lifecycle.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
@@ -177,11 +217,21 @@ export function ExerciseVideoRecorder({
       size="lg"
     >
       <div className="space-y-4">
-        <div className="overflow-hidden rounded-xl bg-black">
+        <div className="relative overflow-hidden rounded-xl bg-black">
           {previewUrl ? (
             <video src={previewUrl} controls playsInline className="aspect-video w-full object-contain" />
           ) : (
-            <video ref={cameraRef} autoPlay muted playsInline className="aspect-video w-full object-cover" />
+            <>
+              <video ref={cameraRef} autoPlay muted playsInline className="aspect-video w-full object-cover" />
+              {!cameraReady && (
+                <div className="absolute inset-0 flex items-center justify-center text-center text-sm text-slate-300">
+                  <div className="space-y-2 px-6">
+                    <Camera className="mx-auto h-8 w-8" />
+                    <p>Clique em “Ativar câmera” para permitir o acesso.</p>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -208,8 +258,12 @@ export function ExerciseVideoRecorder({
             <Button type="button" onClick={stopRecording}>
               <CircleStop className="h-4 w-4" /> Parar gravação
             </Button>
+          ) : !cameraReady ? (
+            <Button type="button" onClick={startCamera} loading={requestingCamera}>
+              <Camera className="h-4 w-4" /> {error ? "Tentar novamente" : "Ativar câmera"}
+            </Button>
           ) : (
-            <Button type="button" onClick={startRecording} disabled={Boolean(error)}>
+            <Button type="button" onClick={startRecording}>
               <Camera className="h-4 w-4" /> Iniciar gravação
             </Button>
           )}
