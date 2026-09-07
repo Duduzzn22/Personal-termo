@@ -2,6 +2,7 @@ import { CalendarDays, CreditCard, Dumbbell, LogOut, Ruler, WalletCards } from "
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { PortalAgendaLink } from "@/components/portal/PortalAgendaLink";
+import { ExerciseVideoButton } from "@/components/workouts/ExerciseVideoButton";
 import { studentPortalSignOutAction } from "@/lib/actions/student-portal.actions";
 import { requireStudentPortal } from "@/lib/auth/current-student";
 import { DIAS_SEMANA } from "@/lib/utils/agenda";
@@ -178,13 +179,27 @@ export default async function StudentPortalPage() {
                         </div>
                         <div className="space-y-2">
                           {items.map((item, index) => {
-                            const exercise = item.exercise as { nome?: string; grupo_muscular?: string } | null;
+                            const exercise = item.exercise as {
+                              nome?: string;
+                              grupo_muscular?: string;
+                              video_url?: string | null;
+                              video_path?: string | null;
+                            } | null;
                             return (
                               <div key={item.id} className="flex items-start gap-3 rounded-lg bg-slate-50 px-3 py-2.5">
                                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-slate-900 text-xs font-semibold text-white">{index + 1}</span>
-                                <div className="min-w-0">
+                                <div className="min-w-0 flex-1">
                                   <p className="text-sm font-medium text-slate-800">{exercise?.nome || "Exercício"}</p>
                                   <p className="text-xs text-slate-500">{[item.series ? `${item.series} séries` : null, item.repeticoes ? `${item.repeticoes} reps` : null, item.carga || null, item.descanso_segundos != null ? `${item.descanso_segundos}s descanso` : null].filter(Boolean).join(" · ") || "Sem prescrição detalhada"}</p>
+                                  {(exercise?.video_path || exercise?.video_url) && (
+                                    <div className="mt-2">
+                                      <ExerciseVideoButton
+                                        exerciseName={exercise.nome || "Exercício"}
+                                        videoPath={exercise.video_path}
+                                        externalUrl={exercise.video_url}
+                                      />
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             );
