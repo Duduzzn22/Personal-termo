@@ -18,6 +18,7 @@ export interface WorkoutPlan {
   student_id: string;
   nome: string;
   objetivo: string | null;
+  dias_semana: number[];
   data_inicio: string | null;
   data_fim: string | null;
   status: "ativo" | "arquivado";
