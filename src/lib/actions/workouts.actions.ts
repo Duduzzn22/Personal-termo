@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { requireTrainer } from "@/lib/auth/current-trainer";
 import { createClient } from "@/lib/supabase/server";
@@ -10,7 +11,10 @@ export interface WorkoutActionState {
   error?: string;
   fieldErrors?: Record<string, string>;
   success?: boolean;
+  exerciseId?: string;
 }
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function stringValue(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -29,6 +33,15 @@ function optionalNumber(formData: FormData, key: string, min: number, max: numbe
   return { value };
 }
 
+function scopedVideoPath(formData: FormData, trainerId: string, exerciseId: string) {
+  const path = nullableString(formData, "video_path");
+  if (!path) return { value: null as string | null };
+  if (!path.startsWith(`${trainerId}/${exerciseId}/`)) {
+    return { error: "O caminho do vídeo não pertence a este exercício." };
+  }
+  return { value: path };
+}
+
 export async function createExerciseAction(
   _prevState: WorkoutActionState,
   formData: FormData
@@ -39,16 +52,24 @@ export async function createExerciseAction(
   try {
     const { userId } = await requireTrainer();
     const db = await createClient();
+    const requestedId = stringValue(formData, "exercise_id");
+    const exerciseId = UUID_RE.test(requestedId) ? requestedId : randomUUID();
+    const videoPath = scopedVideoPath(formData, userId, exerciseId);
+    if (videoPath.error) return { error: videoPath.error };
+
     await new ExercisesRepository(db).create(userId, {
+      id: exerciseId,
       nome,
       grupo_muscular: nullableString(formData, "grupo_muscular"),
       equipamento: nullableString(formData, "equipamento"),
       instrucoes: nullableString(formData, "instrucoes"),
       video_url: nullableString(formData, "video_url"),
+      video_path: videoPath.value,
       ativo: true,
     });
     revalidatePath("/treinos");
-    return { success: true };
+    revalidatePath("/portal");
+    return { success: true, exerciseId };
   } catch (error) {
     const message = error instanceof Error && error.message.includes("idx_exercises_unique_name_per_trainer")
       ? "Já existe um exercício com esse nome."
@@ -68,15 +89,20 @@ export async function updateExerciseAction(
   try {
     const { userId } = await requireTrainer();
     const db = await createClient();
+    const videoPath = scopedVideoPath(formData, userId, exerciseId);
+    if (videoPath.error) return { error: videoPath.error };
+
     await new ExercisesRepository(db).update(userId, exerciseId, {
       nome,
       grupo_muscular: nullableString(formData, "grupo_muscular"),
       equipamento: nullableString(formData, "equipamento"),
       instrucoes: nullableString(formData, "instrucoes"),
       video_url: nullableString(formData, "video_url"),
+      video_path: videoPath.value,
     });
     revalidatePath("/treinos");
-    return { success: true };
+    revalidatePath("/portal");
+    return { success: true, exerciseId };
   } catch {
     return { error: "Não foi possível atualizar o exercício." };
   }
