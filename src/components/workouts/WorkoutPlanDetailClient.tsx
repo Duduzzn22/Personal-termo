@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Archive, ExternalLink, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
+import { Archive, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Modal } from "@/components/ui/Modal";
 import { WorkoutPlanForm } from "./WorkoutPlanForm";
 import { AddWorkoutItemForm } from "./AddWorkoutItemForm";
+import { ExerciseVideoButton } from "./ExerciseVideoButton";
 import { archiveWorkoutPlanAction, removeWorkoutItemAction } from "@/lib/actions/workouts.actions";
 import type { Student } from "@/types/database";
 import type { Exercise, WorkoutPlanDetail, WorkoutPlanItemWithExercise } from "@/types/workout";
@@ -175,10 +176,13 @@ export function WorkoutPlanDetailClient({
                     </div>
                     <div className="rounded-lg bg-slate-50 px-3 py-2">
                       <p className="text-[11px] uppercase tracking-wide text-slate-400">Referência</p>
-                      {item.exercise.video_url ? (
-                        <a href={item.exercise.video_url} target="_blank" rel="noreferrer" className="mt-0.5 inline-flex items-center gap-1 text-sm font-medium text-slate-800 hover:underline">
-                          Ver vídeo <ExternalLink className="h-3.5 w-3.5" />
-                        </a>
+                      {item.exercise.video_path || item.exercise.video_url ? (
+                        <ExerciseVideoButton
+                          exerciseName={item.exercise.nome}
+                          videoPath={item.exercise.video_path}
+                          externalUrl={item.exercise.video_url}
+                          compact
+                        />
                       ) : (
                         <p className="mt-0.5 text-sm font-medium text-slate-800">—</p>
                       )}
