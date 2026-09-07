@@ -20,7 +20,20 @@ export async function GET(request: NextRequest) {
   }
 
   const { data: { user } } = await supabase.auth.getUser();
-  if (user?.app_metadata?.role === "student") {
+  if (!user) {
+    return NextResponse.redirect(new URL(authErrorPath, request.url));
+  }
+
+  const { data: portalAccount } = await supabase
+    .from("student_portal_accounts")
+    .select("id,enabled")
+    .eq("auth_user_id", user.id)
+    .eq("enabled", true)
+    .maybeSingle();
+
+  // O vínculo em student_portal_accounts é a fonte de verdade para contas de aluno.
+  // O app_metadata.role continua sendo usado como defesa extra e compatibilidade.
+  if (user.app_metadata?.role === "student" || portalAccount) {
     return NextResponse.redirect(new URL(portalNext, request.url));
   }
 

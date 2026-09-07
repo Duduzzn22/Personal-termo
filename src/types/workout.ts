@@ -6,6 +6,7 @@ export interface Exercise {
   equipamento: string | null;
   instrucoes: string | null;
   video_url: string | null;
+  video_path: string | null;
   ativo: boolean;
   created_at: string;
   updated_at: string;
@@ -17,6 +18,7 @@ export interface WorkoutPlan {
   student_id: string;
   nome: string;
   objetivo: string | null;
+  dias_semana: number[];
   data_inicio: string | null;
   data_fim: string | null;
   status: "ativo" | "arquivado";

@@ -21,10 +21,12 @@ function formatDate(value: string | null) {
 }
 
 export function WorkoutsClient({
+  trainerId,
   plans,
   exercises,
   students,
 }: {
+  trainerId: string;
   plans: WorkoutPlanWithStudent[];
   exercises: Exercise[];
   students: Student[];
@@ -223,7 +225,7 @@ export function WorkoutsClient({
         title={editingExercise ? "Editar exercício" : "Novo exercício"}
         size="lg"
       >
-        <ExerciseForm exercise={editingExercise} onSuccess={closeExerciseModal} />
+        <ExerciseForm exercise={editingExercise} trainerId={trainerId} onSuccess={closeExerciseModal} />
       </Modal>
     </div>
   );

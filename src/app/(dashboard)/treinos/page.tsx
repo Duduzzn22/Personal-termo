@@ -15,5 +15,5 @@ export default async function TreinosPage() {
     new StudentsRepository(db).list(userId, { status: "ativo" }),
   ]);
 
-  return <WorkoutsClient plans={plans} exercises={exercises} students={students} />;
+  return <WorkoutsClient trainerId={userId} plans={plans} exercises={exercises} students={students} />;
 }

@@ -7,7 +7,7 @@ export async function requireStudentPortal() {
   const db = await createClient();
   const { data: { user } } = await db.auth.getUser();
 
-  if (!user || user.app_metadata?.role !== "student") {
+  if (!user) {
     redirect("/portal/login");
   }
 

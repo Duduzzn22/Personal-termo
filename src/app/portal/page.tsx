@@ -1,10 +1,11 @@
-import { CalendarDays, CreditCard, Dumbbell, LogOut, Ruler, WalletCards } from "lucide-react";
+import { CalendarCheck2, CalendarDays, CreditCard, Dumbbell, LogOut, Ruler, WalletCards } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { PortalAgendaLink } from "@/components/portal/PortalAgendaLink";
+import { PortalWorkoutPlanCard } from "@/components/portal/PortalWorkoutPlanCard";
 import { studentPortalSignOutAction } from "@/lib/actions/student-portal.actions";
 import { requireStudentPortal } from "@/lib/auth/current-student";
-import { DIAS_SEMANA } from "@/lib/utils/agenda";
+import { DIAS_SEMANA, todayISO, weekdayOfISODate } from "@/lib/utils/agenda";
 import { formatCurrencyFromCents } from "@/lib/utils/format";
 
 function wallDate(value: string | null | undefined) {
@@ -59,6 +60,15 @@ export default async function StudentPortalPage() {
         .order("ordem", { ascending: true })
     : { data: [] };
   const workoutItems = itemsResult.data ?? [];
+
+  const today = todayISO();
+  const todayWeekday = weekdayOfISODate(today);
+  const todayPlans = plans.filter((plan) => {
+    const days = Array.isArray(plan.dias_semana) ? plan.dias_semana.map(Number) : [];
+    const started = !plan.data_inicio || plan.data_inicio <= today;
+    const notFinished = !plan.data_fim || plan.data_fim >= today;
+    return started && notFinished && days.includes(todayWeekday);
+  });
 
   const firstName = student.nome_completo.split(" ")[0];
 
@@ -139,6 +149,35 @@ export default async function StudentPortalPage() {
           </Card>
         </div>
 
+        <Card className="mt-4 border-slate-900">
+          <CardHeader>
+            <div>
+              <CardTitle>Treino de hoje</CardTitle>
+              <p className="mt-1 text-xs text-slate-500">{DIAS_SEMANA[todayWeekday]} · {wallDate(today)}</p>
+            </div>
+            <CalendarCheck2 className="h-5 w-5 text-slate-700" />
+          </CardHeader>
+          <CardContent>
+            {todayPlans.length === 0 ? (
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-sm font-medium text-slate-700">Nenhum treino programado para hoje.</p>
+                <p className="mt-1 text-xs text-slate-500">Quando o personal definir os dias de cada plano, o treino correspondente aparecerá aqui automaticamente.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                {todayPlans.map((plan) => (
+                  <PortalWorkoutPlanCard
+                    key={plan.id}
+                    plan={plan}
+                    items={workoutItems.filter((item) => item.workout_plan_id === plan.id)}
+                    highlight
+                  />
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Card>
             <CardHeader><CardTitle>Seus horários</CardTitle><CalendarDays className="h-5 w-5 text-slate-400" /></CardHeader>
@@ -168,32 +207,14 @@ export default async function StudentPortalPage() {
                 <p className="text-sm text-slate-500">Nenhum plano de treino ativo.</p>
               ) : (
                 <div className="space-y-4">
-                  {plans.map((plan) => {
-                    const items = workoutItems.filter((item) => item.workout_plan_id === plan.id);
-                    return (
-                      <div key={plan.id} className="rounded-xl border border-slate-200 p-4">
-                        <div className="mb-3">
-                          <p className="font-semibold text-slate-900">{plan.nome}</p>
-                          {plan.objetivo && <p className="mt-0.5 text-sm text-slate-500">{plan.objetivo}</p>}
-                        </div>
-                        <div className="space-y-2">
-                          {items.map((item, index) => {
-                            const exercise = item.exercise as { nome?: string; grupo_muscular?: string } | null;
-                            return (
-                              <div key={item.id} className="flex items-start gap-3 rounded-lg bg-slate-50 px-3 py-2.5">
-                                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-slate-900 text-xs font-semibold text-white">{index + 1}</span>
-                                <div className="min-w-0">
-                                  <p className="text-sm font-medium text-slate-800">{exercise?.nome || "Exercício"}</p>
-                                  <p className="text-xs text-slate-500">{[item.series ? `${item.series} séries` : null, item.repeticoes ? `${item.repeticoes} reps` : null, item.carga || null, item.descanso_segundos != null ? `${item.descanso_segundos}s descanso` : null].filter(Boolean).join(" · ") || "Sem prescrição detalhada"}</p>
-                                </div>
-                              </div>
-                            );
-                          })}
-                          {items.length === 0 && <p className="text-sm text-slate-500">O treino ainda não possui exercícios.</p>}
-                        </div>
-                      </div>
-                    );
-                  })}
+                  {plans.map((plan) => (
+                    <PortalWorkoutPlanCard
+                      key={plan.id}
+                      plan={plan}
+                      items={workoutItems.filter((item) => item.workout_plan_id === plan.id)}
+                      showDays
+                    />
+                  ))}
                 </div>
               )}
             </CardContent>

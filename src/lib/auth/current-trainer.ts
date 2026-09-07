@@ -29,6 +29,19 @@ export async function requireTrainer(): Promise<{
     redirect("/login");
   }
 
+  const { data: portalAccount } = await supabase
+    .from("student_portal_accounts")
+    .select("id")
+    .eq("auth_user_id", user.id)
+    .eq("enabled", true)
+    .maybeSingle();
+
+  // Conta vinculada ao Portal do Aluno nunca pode cair no painel de personal,
+  // mesmo que um usuário antigo esteja sem app_metadata.role = student.
+  if (user.app_metadata?.role === "student" || portalAccount) {
+    redirect("/portal");
+  }
+
   const { data: adminLink } = await supabase
     .from("admins")
     .select("managed_trainer_id")
